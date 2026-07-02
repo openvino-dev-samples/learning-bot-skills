@@ -1,0 +1,25 @@
+{
+  "venv_name": "venv-pipeopt",
+  "python_version": "3.11",
+  "mem_need_gb": 8.0,
+  "server_alive_timeout": 600,
+  "notebooks_repo": {
+    "url": "https://github.com/openvinotoolkit/openvino_notebooks",
+    "branch": "latest",
+    "china_mirror": "https://gitcode.com/openvinotoolkit/openvino_notebooks"
+  },
+  "default_device_policy": {
+    "llm": "GPU",
+    "encoder": "GPU",
+    "retriever": "CPU",
+    "preprocess": "CPU",
+    "postprocess": "CPU"
+  },
+  "default_precision_policy": {
+    "llm": "INT4",
+    "encoder": "INT8",
+    "retriever": "INT8",
+    "preprocess": "FP16",
+    "postprocess": "FP16"
+  }
+}
