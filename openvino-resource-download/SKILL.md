@@ -1,9 +1,9 @@
 ---
-name: "modelscope-skill"
+name: "openvino-resource-download"
 description: "Fetches ModelScope Intel AI PC zone and OpenVINO related information including news, models, skills, articles, events and application notebooks. Invoke when users ask about ModelScope AI PC zone updates, OpenVINO, models, skills, technical articles or Intel AI tools."
 ---
 
-# ModelScope AI PC Information Tool
+# Resource Download (ModelScope)
 
 This tool retrieves information from the ModelScope Intel AI PC zone and related Intel/OpenVINO resource websites using browser tools. It provides the latest updates on activities, models, skills, articles, events and OpenVINO application examples.
 

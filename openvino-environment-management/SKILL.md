@@ -1,9 +1,9 @@
 ---
-name: "env-setup-skill"
+name: "openvino-environment-management"
 description: "Configure Intel AIPC development environment on Windows: install Python, Git, ModelScope, OpenVINO, PyTorch CPU, and set up domestic mirrors. CMake and Visual Studio are optional components. Call this skill when you need to configure Intel AIPC development environment on Windows."
 ---
 
-# Intel AIPC Windows Environment Setup
+# Environment Management (Intel AIPC)
 
 This skill configures Intel AIPC development environment on Windows, including basic environment (Python, Git, ModelScope, OpenVINO, PyTorch XPU) and optional C++ compilation environment (CMake, Visual Studio).
 
