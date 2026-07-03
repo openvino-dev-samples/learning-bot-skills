@@ -1,5 +1,5 @@
 ---
-name: "intel-aipc-env-setup"
+name: "env_setup_skill"
 description: "Configure Intel AIPC development environment on Windows: install Python, Git, ModelScope, OpenVINO, PyTorch XPU, and set up domestic mirrors. CMake and Visual Studio are optional components. Call this skill when you need to configure Intel AIPC development environment on Windows."
 ---
 
@@ -396,37 +396,29 @@ Write-Host "OpenVINO installation completed. Verifying..."
 python -c "import openvino; print('OpenVINO version:', openvino.__version__)"
 ```
 
-### Step 13: Install PyTorch with Intel XPU Support
+### Step 13: Install PyTorch (CPU Version)
 
 ```powershell
-Write-Host "`n=== Installing PyTorch with Intel XPU Support ==="
+Write-Host "`n=== Installing PyTorch (CPU Version) ==="
 
-# Try Intel XPU version first
+# Install CPU version directly
 try {
-    pip install torch torchvision torchaudio --index-url https://pytorch-extension.intel.com/release-whl/stable/xpu/cn/ --trusted-host pytorch-extension.intel.com
-    Write-Host "XPU version installed successfully"
+    pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu --trusted-host download.pytorch.org
+    Write-Host "CPU version installed successfully"
 } catch {
-    Write-Host "XPU version installation failed, trying CPU version..."
-    try {
-        pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu --trusted-host download.pytorch.org
-        Write-Host "CPU version installed successfully"
-    } catch {
-        Write-Host "CPU version installation failed, trying Tsinghua mirror..."
-        pip install torch torchvision torchaudio -i https://pypi.tuna.tsinghua.edu.cn/simple --trusted-host pypi.tuna.tsinghua.edu.cn
-        Write-Host "Installed via Tsinghua mirror successfully"
-    }
-}
-
-# Install Intel PyTorch Extension
-try {
-    pip install intel-extension-for-pytorch --index-url https://pytorch-extension.intel.com/release-whl/stable/xpu/cn/ --trusted-host pytorch-extension.intel.com
-} catch {
-    Write-Host "IPEX installation failed"
+    Write-Host "CPU version installation failed, trying Tsinghua mirror..."
+    pip install torch torchvision torchaudio -i https://pypi.tuna.tsinghua.edu.cn/simple --trusted-host pypi.tuna.tsinghua.edu.cn
+    Write-Host "Installed via Tsinghua mirror successfully"
 }
 
 Write-Host "PyTorch installation completed. Verifying..."
 python -c "import torch; print('PyTorch version:', torch.__version__)"
 ```
+
+**Important Notes:**
+- **Version Reference**: Specific PyTorch versions should be referenced from the target notebook project. This installation provides a base CPU environment only.
+- **Virtual Environment Strategy**: For actual deployment, create project-specific virtual environments instead of using Jupyter directly. Each reference notebook project should have its own isolated virtual environment with exact package versions matching the notebook requirements.
+- **No Jupyter in Deployment**: When the agent deploys actual projects referenced from notebooks, do not use Jupyter. Instead, create standalone scripts and run them in dedicated virtual environments.
 
 ### Step 14: Test Device Availability with OpenVINO
 
@@ -584,3 +576,5 @@ powershell -ExecutionPolicy Bypass -File intel_aipc_env_setup.ps1 -FullInstall
 6. **Git Mirror**: Use ghproxy.net to access github.com
 7. **pip Mirror**: Configure Tsinghua University mirror
 8. **HF/ModelScope Mirror**: Configure hf-mirror.com and domestic API URLs
+9. **PyTorch CPU Version**: Changed from XPU to CPU version for broader compatibility
+10. **Virtual Environment Strategy**: Each reference notebook project should use its own isolated virtual environment with exact package versions

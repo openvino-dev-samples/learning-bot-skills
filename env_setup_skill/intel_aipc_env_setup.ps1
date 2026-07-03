@@ -568,44 +568,28 @@ try {
 }
 
 Write-Host ""
-Write-Host "[13/16] Installing PyTorch with Intel XPU support..." -ForegroundColor White
+Write-Host "[13/16] Installing PyTorch (CPU version)..." -ForegroundColor White
 
-Write-Host "  Installing PyTorch with Intel XPU support..."
+Write-Host "  Installing PyTorch CPU version..."
+Write-Host "  Note: Specific PyTorch version should be referenced from the target notebook project."
+Write-Host "  This installation provides a base CPU environment. Create project-specific virtual environments for actual deployment."
+
 try {
-    pip install torch torchvision torchaudio --index-url https://pytorch-extension.intel.com/release-whl/stable/xpu/cn/ --trusted-host pytorch-extension.intel.com --quiet
+    pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu --trusted-host download.pytorch.org --quiet
     $torchVersion = python -c "import torch; print(`"PyTorch version:`", torch.__version__)"
     Write-Host "  $torchVersion"
-    Write-Success "PyTorch with Intel XPU support installed"
+    Write-Success "PyTorch CPU version installed"
 } catch {
-    Write-Warn "PyTorch XPU version installation failed"
-    Write-Warn "Falling back to CPU version..."
+    Write-Warn "PyTorch CPU version installation failed"
+    Write-Warn "Trying Tsinghua mirror..."
     try {
-        pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu --trusted-host download.pytorch.org --quiet
+        pip install torch torchvision torchaudio -i https://pypi.tuna.tsinghua.edu.cn/simple --trusted-host pypi.tuna.tsinghua.edu.cn --quiet
         $torchVersion = python -c "import torch; print(`"PyTorch version:`", torch.__version__)"
         Write-Host "  $torchVersion"
-        Write-Success "PyTorch CPU version installed"
+        Write-Success "PyTorch installed (via Tsinghua mirror)"
     } catch {
-        Write-Warn "PyTorch CPU version installation failed"
-        Write-Warn "Trying Tsinghua mirror..."
-        try {
-            pip install torch torchvision torchaudio -i https://pypi.tuna.tsinghua.edu.cn/simple --trusted-host pypi.tuna.tsinghua.edu.cn --quiet
-            $torchVersion = python -c "import torch; print(`"PyTorch version:`", torch.__version__)"
-            Write-Host "  $torchVersion"
-            Write-Success "PyTorch installed (via Tsinghua mirror)"
-        } catch {
-            Write-Warn "PyTorch installation failed"
-        }
+        Write-Warn "PyTorch installation failed"
     }
-}
-
-Write-Host "  Installing Intel PyTorch Extension (IPEX)..."
-try {
-    pip install intel-extension-for-pytorch --index-url https://pytorch-extension.intel.com/release-whl/stable/xpu/cn/ --trusted-host pytorch-extension.intel.com --quiet
-    $ipexVersion = python -c "import intel_extension_for_pytorch as ipex; print(`"IPEX version:`", ipex.__version__)"
-    Write-Host "  $ipexVersion"
-    Write-Success "Intel PyTorch Extension installed"
-} catch {
-    Write-Warn "Intel PyTorch Extension installation failed"
 }
 
 Write-Host ""
@@ -680,31 +664,13 @@ try:
     import torch
     print(f"PyTorch version: {torch.__version__}")
     
-    try:
-        import intel_extension_for_pytorch as ipex
-        print(f"IPEX version: {ipex.__version__}")
-        
-        devices = ipex.xpu.get_device_name()
-        if isinstance(devices, list):
-            print(f"Available XPU devices: {devices}")
-            for i, dev in enumerate(devices):
-                print(f"  Device {i}: {dev}")
-        else:
-            print(f"XPU device: {devices}")
-            
-        xpu_available = ipex.xpu.is_available()
-        if xpu_available:
-            print("✓ Intel XPU available")
-            xpu_count = ipex.xpu.device_count()
-            print(f"  Number of XPU devices: {xpu_count}")
-        else:
-            print("✗ Intel XPU not available")
-            
-    except ImportError:
-        print("IPEX not installed")
-        
+    print("Note: This is a CPU-only installation.")
+    print("For project-specific environments, create virtual environments with versions matching the target notebook.")
+    
     cuda_available = torch.cuda.is_available()
     print(f"CUDA available: {cuda_available}")
+    
+    print("✓ PyTorch CPU version installed and working")
     
 except Exception as e:
     print(f"Error: {e}")
@@ -842,7 +808,7 @@ if ($InstallVS -or $FullInstall) {
 }
 Write-Host "✓ ModelScope installed and HF mirror configured" -ForegroundColor Green
 Write-Host "✓ OpenVINO installed" -ForegroundColor Green
-Write-Host "✓ PyTorch with Intel XPU support installed" -ForegroundColor Green
+Write-Host "✓ PyTorch CPU version installed" -ForegroundColor Green
 Write-Host "✓ Device availability test completed" -ForegroundColor Green
 Write-Host "✓ Environment variables updated" -ForegroundColor Green
 
@@ -863,6 +829,8 @@ Write-Host "3. Hugging Face mirror: https://hf-mirror.com (HF_ENDPOINT set)" -Fo
 Write-Host "4. Update Intel drivers: https://www.intel.com/content/www/us/en/support/detect.html" -ForegroundColor Yellow
 Write-Host "5. Git accesses github.com via ghproxy.net" -ForegroundColor Yellow
 Write-Host "6. CMake and Visual Studio are optional components, install only when C++ compilation is needed" -ForegroundColor Yellow
+Write-Host "7. PyTorch is installed as CPU version. Specific versions should be referenced from target notebook projects." -ForegroundColor Yellow
+Write-Host "8. For actual deployment: Create project-specific virtual environments instead of using Jupyter." -ForegroundColor Yellow
 
 Write-Host ""
 Write-Host "Happy coding with Intel AIPC!" -ForegroundColor Cyan

@@ -1,5 +1,5 @@
 ---
-name: "modelscope-aipc-info-en"
+name: "modelscope_skill"
 description: "Fetches ModelScope Intel AI PC zone and OpenVINO related information including news, models, skills, articles, events and application notebooks. Invoke when users ask about ModelScope AI PC zone updates, OpenVINO, models, skills, technical articles or Intel AI tools."
 ---
 
