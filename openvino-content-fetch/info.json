@@ -1,0 +1,14 @@
+{
+  "venv_name": "venv-contentfetch",
+  "python_version": "3.11",
+  "mem_need_gb": 4.0,
+  "notebooks_repo": {
+    "url": "https://github.com/openvinotoolkit/openvino_notebooks",
+    "branch": "latest",
+    "china_mirror": "https://gitcode.com/openvinotoolkit/openvino_notebooks"
+  },
+  "sources": {
+    "modelscope": "https://modelscope.cn/brand/view/AI_PC",
+    "csdn": "https://inteldevzone.blog.csdn.net/?type=lately"
+  }
+}

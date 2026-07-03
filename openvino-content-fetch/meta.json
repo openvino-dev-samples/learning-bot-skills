@@ -1,0 +1,14 @@
+{
+  "display_name": "OpenVINO Content Fetch",
+  "display_description": "Fetches and parses notebooks, sample codes, models, and articles from OpenVINO GitHub, ModelScope AI PC zone, and CSDN Intel Developer Zone.",
+  "detail_describe": "A skill to fetch, parse, and structure content from multiple online sources (OpenVINO GitHub, ModelScope, CSDN) for student recommendation and bot training. It runs locally and supports offline fallbacks.",
+  "name": "openvino-content-fetch",
+  "icon": "",
+  "use_cases": [
+    "Fetch and parse OpenVINO notebooks for student recommendation",
+    "Gather ModelScope AI PC zone updates, skills, and models",
+    "Retrieve CSDN Intel Developer Zone articles for learning content"
+  ],
+  "author": "Zhuo",
+  "version": "1.0.0"
+}
