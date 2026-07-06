@@ -798,6 +798,49 @@ SEEDED_CSDN = [
 
 # ----------------- Parser Implementations -----------------
 
+def fetch_github_notebooks_live(china=False):
+    """List the CURRENT notebooks from openvino_notebooks@latest via the GitHub API.
+
+    This is the authoritative "latest" source: it reads the live notebooks/ directory
+    listing so recommendations always reflect the current branch, not a baked snapshot.
+    Returns {"status": "ok"|"error", "items": [...]} — caller falls back to a local repo
+    parse or SEEDED_NOTEBOOKS on error/offline.
+    """
+    # GitHub REST: contents of notebooks/ on the `latest` branch = one entry per notebook folder.
+    api_url = "https://api.github.com/repos/openvinotoolkit/openvino_notebooks/contents/notebooks?ref=latest"
+    headers = {
+        "User-Agent": "openvino-content-fetch",
+        "Accept": "application/vnd.github+json",
+    }
+    try:
+        req = urllib.request.Request(api_url, headers=headers)
+        with urllib.request.urlopen(req, timeout=15) as response:
+            entries = json.loads(response.read().decode("utf-8"))
+    except Exception as e:
+        log(f"Live GitHub API listing failed ({e}). Will fall back to local repo / seeded dataset.")
+        return {"status": "error", "items": []}
+
+    items = []
+    for ent in entries:
+        if ent.get("type") != "dir":
+            continue
+        slug = ent.get("name")
+        if not slug:
+            continue
+        items.append({
+            "slug": slug,
+            "title": slug.replace("-", " ").title(),
+            "description": "",
+            "category": "",
+            "url": f"https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/{slug}",
+        })
+    if not items:
+        log("Live GitHub API returned no notebook folders; falling back.")
+        return {"status": "error", "items": []}
+    log(f"Live GitHub API listed {len(items)} notebooks from latest branch.")
+    return {"status": "ok", "items": items}
+
+
 def parse_github_notebooks(repo_dir):
     """Scan and parse notebooks from a local openvino_notebooks repository clone."""
     if not repo_dir or not os.path.isdir(repo_dir):
@@ -1054,16 +1097,19 @@ def main():
     
     total_count = 0
     
-    # 1. GitHub
+    # 1. GitHub — prefer the LIVE latest-branch listing, then a local clone, then seeded fallback.
     if args.source in ["github", "all"]:
-        repo_path = args.repo_dir
-        if not repo_path:
-            user_profile = os.environ.get("USERPROFILE", "")
-            if user_profile:
-                repo_path = os.path.join(user_profile, ".openvino", "openvino_notebooks")
-        
-        log(f"Attempting to parse notebooks from: {repo_path}")
-        github_data = parse_github_notebooks(repo_path)
+        github_data = fetch_github_notebooks_live(china=args.china)
+        if github_data["status"] == "ok":
+            log("GitHub source: live latest-branch listing.")
+        else:
+            repo_path = args.repo_dir
+            if not repo_path:
+                user_profile = os.environ.get("USERPROFILE", "")
+                if user_profile:
+                    repo_path = os.path.join(user_profile, ".openvino", "openvino_notebooks")
+            log(f"GitHub source: falling back to local repo parse at {repo_path} (else seeded dataset).")
+            github_data = parse_github_notebooks(repo_path)
         final_result["sources"]["github"] = github_data
         if github_data["status"] == "ok":
             total_count += len(github_data["items"])

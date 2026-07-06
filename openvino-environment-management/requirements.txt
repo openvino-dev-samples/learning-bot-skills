@@ -1,0 +1,7 @@
+# Python packages this skill installs into the system Python (via intel_aipc_env_setup.ps1).
+# Declared here so the skill loader recognizes them as expected dependencies.
+modelscope
+openvino
+torch
+torchvision
+torchaudio

@@ -3,10 +3,10 @@ Set-ExecutionPolicy Bypass -Scope Process -Force
 Write-Host "=== OpenVINO and PyTorch Installation Test ===" -ForegroundColor Cyan
 
 Write-Host ""
-Write-Host "[1/6] Installing OpenVINO 2024.6.0..." -ForegroundColor White
+Write-Host "[1/6] Installing OpenVINO (latest stable)..." -ForegroundColor White
 
 try {
-    pip install openvino==2024.6.0 openvino-dev==2024.6.0 --quiet
+    pip install --upgrade openvino --quiet
     $ovVersion = python -c "import openvino; print(openvino.__version__)"
     Write-Host "  OpenVINO version: $ovVersion" -ForegroundColor Green
 } catch {

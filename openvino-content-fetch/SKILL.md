@@ -12,7 +12,15 @@ description: |
 
 # OpenVINO Content Fetch — learning bot pipeline step
 
-This skill provides the content retrieval step for the OpenVINO student learning bot. It crawls, scrapes, or reads local/remote OpenVINO resources and formats them as a clean, structured index inside a standard [SKILL_RESULT] block.
+This skill owns **content**: notebooks, tutorials, sample code, and articles from the OpenVINO
+GitHub repo, ModelScope AI PC Zone, and CSDN Intel Developer Zone. It crawls/reads these resources
+and returns a clean, structured index inside a standard [SKILL_RESULT] block. The GitHub notebook
+list is fetched **live from the `latest` branch** (GitHub API), so recommendations always reflect the
+current notebooks; a seeded list is used only as an offline/failure fallback.
+
+> **Division of labour:** this skill fetches *content* (notebooks / tutorials / articles) for
+> recommendation & learning. To **download model files or pre-converted IR** from ModelScope, use the
+> `openvino-resource-download` skill instead.
 
 ## Parameters
 

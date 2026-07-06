@@ -560,14 +560,14 @@ $env:MODELSCOPE_API_URL = "https://api.modelscope.cn"
 Write-Success "ModelScope API URL configured"
 
 Write-Host ""
-Write-Host "[12/16] Installing OpenVINO 2024.6.0..." -ForegroundColor White
+Write-Host "[12/16] Installing OpenVINO (latest stable)..." -ForegroundColor White
 
-Write-Host "  Installing openvino==2024.6.0 and openvino-dev==2024.6.0..."
+Write-Host "  Installing the latest stable openvino..."
 try {
-    pip install openvino==2024.6.0 openvino-dev==2024.6.0 --quiet
+    pip install --upgrade openvino --quiet
     $ovVersion = python -c "import openvino; print(openvino.__version__)"
     Write-Host "  OpenVINO version: $ovVersion"
-    Write-Success "OpenVINO 2024.6.0 installation completed"
+    Write-Success "OpenVINO (latest stable) installation completed: $ovVersion"
 } catch {
     Write-Warn "OpenVINO installation failed"
 }
@@ -816,7 +816,7 @@ if ($InstallVS -or $FullInstall) {
     Write-Host "○ Visual Studio skipped (optional)" -ForegroundColor Gray
 }
 Write-Host "✓ ModelScope installed and HF mirror configured" -ForegroundColor Green
-Write-Host "✓ OpenVINO 2024.6.0 installed" -ForegroundColor Green
+Write-Host "✓ OpenVINO (latest stable) installed" -ForegroundColor Green
 Write-Host "✓ PyTorch CPU version installed" -ForegroundColor Green
 Write-Host "✓ Device availability test completed" -ForegroundColor Green
 Write-Host "✓ Environment variables updated" -ForegroundColor Green

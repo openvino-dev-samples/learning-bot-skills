@@ -5,7 +5,7 @@ description: "Configure Intel AIPC development environment on Windows: install P
 
 # Environment Management (Intel AIPC)
 
-This skill configures Intel AIPC development environment on Windows, including basic environment (Python, Git, ModelScope, OpenVINO, PyTorch XPU) and optional C++ compilation environment (CMake, Visual Studio).
+This skill configures Intel AIPC development environment on Windows, including basic environment (Python, Git, ModelScope, latest-stable OpenVINO, PyTorch CPU) and optional C++ compilation environment (CMake, Visual Studio).
 
 ## Script Parameters
 
