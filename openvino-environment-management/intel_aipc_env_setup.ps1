@@ -479,7 +479,7 @@ if ($InstallCmake -or $FullInstall) {
             
             $currentPath = [Environment]::GetEnvironmentVariable("PATH", "User")
             $oldPaths = @(
-                "C:\Users\intel\AppData\Local\Programs\CMake\bin",
+                "$env:USERPROFILE\AppData\Local\Programs\CMake\bin",
                 "$env:LOCALAPPDATA\Programs\CMake\bin",
                 "$env:USERPROFILE\tools\cmake\bin"
             )

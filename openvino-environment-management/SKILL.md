@@ -280,6 +280,65 @@ if ($ghProxyConfig -eq "https://github.com/") {
 
 **How it works**: After configuration, all `git clone https://github.com/xxx` commands will automatically be converted to `git clone https://ghproxy.net/https://github.com/xxx`, no manual URL modification required.
 
+## Hardware Detection Standard
+
+> **⚠️ Important**: When detecting CPU, GPU, NPU, or any hardware information, you **MUST** use the OpenVINO `hello_query_device.py` script as the primary method. Do NOT use PowerShell WMI/CIM queries as the final result.
+
+### Why hello_query_device.py?
+
+- It provides **complete hardware information** including device name, architecture, optimization capabilities, GOPS, and memory
+- It covers **all three devices**: CPU, GPU (Intel Arc), and NPU (Intel AI Boost)
+- It is the **official OpenVINO diagnostic tool** and reflects the actual hardware accessible by OpenVINO
+
+### Download and Run
+
+```powershell
+$helloScriptPath = "$env:TEMP\hello_query_device.py"
+$downloadUrls = @(
+    "https://ghproxy.net/https://github.com/openvinotoolkit/openvino/raw/refs/heads/master/samples/python/hello_query_device/hello_query_device.py",
+    "https://github.com/openvinotoolkit/openvino/raw/refs/heads/master/samples/python/hello_query_device/hello_query_device.py"
+)
+
+$downloadSuccess = $false
+foreach ($url in $downloadUrls) {
+    try {
+        Invoke-WebRequest -Uri $url -OutFile $helloScriptPath -UseBasicParsing -ErrorAction Stop
+        $downloadSuccess = $true
+        break
+    } catch {
+        Write-Host "Download failed, trying next URL..."
+    }
+}
+
+if ($downloadSuccess -and (Test-Path $helloScriptPath)) {
+    python $helloScriptPath
+    Remove-Item $helloScriptPath -Force
+}
+```
+
+### Expected Output Example (Intel Ultra 9 285H Processor)
+
+```
+[ INFO ] Available devices:
+[ INFO ] CPU : Intel(R) Core(TM) Ultra 9 285H
+[ INFO ]        OPTIMIZATION_CAPABILITIES: FP32, FP16, INT8, BIN, EXPORT_IMPORT
+[ INFO ]        DEVICE_TYPE: Type.INTEGRATED
+[ INFO ] GPU : Intel(R) Arc(TM) 140T (16GB)
+[ INFO ]        ARCHITECTURE: Intel Xe2 Architecture
+[ INFO ]        OPTIMIZATION_CAPABILITIES: FP32, FP16, INT8, BIN, EXPORT_IMPORT
+[ INFO ]        GOPS: 1848.000000
+[ INFO ] NPU : Intel(R) AI Boost (NPU)
+[ INFO ]        DEVICE_TYPE: Type.INTEGRATED
+```
+
+### Hardware Info Summary
+
+| Device | Name | Architecture | Key Feature |
+|--------|------|--------------|-------------|
+| CPU | Intel(R) Core(TM) Ultra 9 285H | Intel | 16 Cores |
+| GPU | Intel(R) Arc(TM) 140T (16GB) | Intel Xe2 | 1848 GOPS |
+| NPU | Intel(R) AI Boost | Intel | Low-power AI |
+
 ### Step 8: Install CMake (Optional, required for C++ project compilation)
 
 ```powershell
