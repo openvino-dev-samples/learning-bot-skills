@@ -1,7 +1,7 @@
 {
   "display_name": "OpenVINO Pipeline Optimization",
   "display_description": "A developer scaffold + reference standard for building multi-model OpenVINO pipeline demos (Intel AIPC only)",
-  "detail_describe": "A developer-facing scaffold and reference standard. Grounded in the openvino_notebooks repo, it resolves one or more notebooks (or a free-form goal) into a multi-model pipeline skeleton: discover stages, assign per-role device (NPU/GPU/CPU) and precision (INT4/INT8 via NNCF), benchmark end-to-end + per-stage, and provide a client+server template to deploy the demo as a local service. It gives a runnable starting point and shared conventions ([SKILL_RESULT] contract, lifecycle, directory layout); developers build their own pipeline demo on top. Unwired pipeline families return HTTP 501 instead of faking output. Runs locally, offline / China-mirror aware. Not MoE GPU fusion.",
+  "detail_describe": "A developer-facing scaffold and reference standard. Grounded in the openvino_notebooks repo, it resolves one or more notebooks (or a free-form goal) into a multi-model pipeline skeleton: discover stages, assign per-role device (NPU/GPU/CPU) and precision (INT4/INT8 via NNCF), benchmark end-to-end + per-stage, and provide a client+server template to deploy the demo as a local service. It gives a runnable starting point and shared conventions ([SKILL_RESULT] contract, lifecycle, directory layout); developers build their own pipeline demo on top. Unwired pipeline families return HTTP 501 instead of faking output. Runs locally, offline / China-mirror aware.",
   "name": "openvino-pipeline-optimization",
   "icon": "",
   "use_cases": [

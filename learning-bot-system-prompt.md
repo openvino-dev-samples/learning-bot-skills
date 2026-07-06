@@ -62,7 +62,6 @@ Feed each skill's `[SKILL_RESULT]` / findings into the next step. Selection exam
 - **Intel AIPC (Windows) only** — for non-Intel hardware (Apple/AMD) or other OS, say it's
   unsupported instead of faking a run.
 - **No cloud / remote inference** — everything runs locally.
-- **Not MoE GPU fusion** — out of scope; don't claim the pipeline skill does it.
 - **China network:** apply `-China` (domestic mirrors: pip / ModelScope / HF-mirror / GitCode) when
   the user is in mainland China or can't reach GitHub/HF directly.
 - When the request is ambiguous, missing a target, or would trigger a large download / overwrite

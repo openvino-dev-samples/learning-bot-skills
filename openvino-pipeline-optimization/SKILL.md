@@ -14,7 +14,7 @@ description: |
   build a demo / scaffold a pipeline / multi-model pipeline / chain models / ASR->LLM->TTS / RAG /
   vision chatbot / device placement / benchmark the pipeline / deploy as a service / serve a pipeline /
   client server / reference standard.
-  NOT MoE GPU fusion. Requires Intel AIPC hardware.
+  Requires Intel AIPC hardware.
 ---
 
 # OpenVINO Pipeline Optimization — developer scaffold & reference standard
@@ -31,7 +31,7 @@ The spine, end to end:
 
 > **Generic by design.** No model IDs are hardcoded — stages are discovered from the chosen notebooks.
 > No model-family switch — IR export is task-agnostic (`optimum-cli export openvino`). A pipeline
-> family without a wired runner returns HTTP 501; the skill never fabricates output. Not MoE fusion.
+> family without a wired runner returns HTTP 501; the skill never fabricates output.
 
 ---
 
@@ -147,4 +147,4 @@ Exit `0` ok / `1` error. Idempotent: re-runs reuse cloned repo + existing IR (`f
 
 ## Does / does not
 - **Does:** scaffold + benchmark + serve repo-based pipelines; per-stage device/precision; multi-notebook compose; offline/`--china`; provide the `[SKILL_RESULT]` + client/server conventions.
-- **Does not:** MoE GPU fusion; invent model architectures; hardcode model IDs; cloud/non-Intel; fake outputs for unwired families.
+- **Does not:** invent model architectures; hardcode model IDs; cloud/non-Intel; fake outputs for unwired families.
