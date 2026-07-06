@@ -163,7 +163,13 @@ Set-Content -Path "$pipConfigDir\pip.ini" -Value $pipConfig -Encoding UTF8
 Write-Host "pip mirror configured to Tsinghua University mirror."
 ```
 
-### Step 6: Install Git and Git-LFS (No admin rights required, no UAC prompts)
+### Step 6: Install Git (No admin rights required, no UAC prompts)
+> **Git-LFS is optional**: Add `-WithGitLfs` parameter to install. Default installation skips Git-LFS.
+
+```powershell
+$WithGitLfs = $false  # Set to $true to install Git-LFS
+
+Write-Host "`n=== Installing Git ==="
 
 ```powershell
 Write-Host "`n=== Installing Git ==="
@@ -212,35 +218,40 @@ if ($downloadSuccess) {
     }
 }
 
-Write-Host "`n=== Installing Git-LFS ==="
-
-$gitLfsVersion = "3.7.1"
-$gitLfsInstaller = "$env:TEMP\git-lfs-windows-v$gitLfsVersion.exe"
-
-$gitLfsDownloadUrls = @(
-    "https://github.com/git-lfs/git-lfs/releases/download/v$gitLfsVersion/git-lfs-windows-v$gitLfsVersion.exe",
-    "https://ghproxy.net/https://github.com/git-lfs/git-lfs/releases/download/v$gitLfsVersion/git-lfs-windows-v$gitLfsVersion.exe"
-)
-
-foreach ($gitLfsUrl in $gitLfsDownloadUrls) {
-    Write-Host "  Downloading from $gitLfsUrl..."
-    try {
-        Invoke-WebRequest -Uri $gitLfsUrl -OutFile $gitLfsInstaller -UseBasicParsing -Headers $headers -ErrorAction Stop
-        if ($gitLfsUrl.Contains("ghproxy")) {
-            $useMirror = $true
+if ($WithGitLfs) {
+    Write-Host "`n=== Installing Git-LFS (optional) ==="
+    
+    $gitLfsVersion = "3.7.1"
+    $gitLfsInstaller = "$env:TEMP\git-lfs-windows-v$gitLfsVersion.exe"
+    
+    $gitLfsDownloadUrls = @(
+        "https://github.com/git-lfs/git-lfs/releases/download/v$gitLfsVersion/git-lfs-windows-v$gitLfsVersion.exe",
+        "https://ghproxy.net/https://github.com/git-lfs/git-lfs/releases/download/v$gitLfsVersion/git-lfs-windows-v$gitLfsVersion.exe"
+    )
+    
+    foreach ($gitLfsUrl in $gitLfsDownloadUrls) {
+        Write-Host "  Downloading from $gitLfsUrl..."
+        try {
+            Invoke-WebRequest -Uri $gitLfsUrl -OutFile $gitLfsInstaller -UseBasicParsing -Headers $headers -ErrorAction Stop
+            if ($gitLfsUrl.Contains("ghproxy")) {
+                $useMirror = $true
+            }
+            break
+        } catch {
+            Write-Host "  Download failed, trying next URL..."
         }
-        break
-    } catch {
-        Write-Host "  Download failed, trying next URL..."
     }
+    
+    Start-Process -FilePath $gitLfsInstaller -ArgumentList "/S" -Wait
+    Remove-Item $gitLfsInstaller
+    git lfs install
+    Write-Host "  Git-LFS installation completed!" -ForegroundColor Green
+} else {
+    Write-Host "`n=== Git-LFS skipped (use -WithGitLfs to install when needed) ===" -ForegroundColor Yellow
 }
 
-Start-Process -FilePath $gitLfsInstaller -ArgumentList "/S" -Wait
-Remove-Item $gitLfsInstaller
-
-Write-Host "Git and Git-LFS installation completed. Verifying..."
+Write-Host "Git installation completed. Verifying..."
 git --version
-git lfs install
 ```
 
 ### Step 7: Configure Git Domestic Mirror

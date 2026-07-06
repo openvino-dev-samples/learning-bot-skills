@@ -3,7 +3,8 @@ Set-ExecutionPolicy Bypass -Scope Process -Force
 param(
     [switch]$InstallCmake = $false,
     [switch]$InstallVS = $false,
-    [switch]$FullInstall = $false
+    [switch]$FullInstall = $false,
+    [switch]$WithGitLfs = $false
 )
 
 function Write-Header {
@@ -376,45 +377,49 @@ if ($downloadSuccess) {
 }
 
 Write-Host ""
-Write-Host "[7/16] Installing Git-LFS..." -ForegroundColor White
+Write-Host "[7/16] Git-LFS installation (optional)..." -ForegroundColor White
 
-$gitLfsVersion = "3.7.1"
-$gitLfsInstaller = "$env:TEMP\git-lfs-windows-v$gitLfsVersion.exe"
+if ($WithGitLfs) {
+    $gitLfsVersion = "3.7.1"
+    $gitLfsInstaller = "$env:TEMP\git-lfs-windows-v$gitLfsVersion.exe"
 
-$gitLfsDownloadUrls = @(
-    "https://github.com/git-lfs/git-lfs/releases/download/v$gitLfsVersion/git-lfs-windows-v$gitLfsVersion.exe",
-    "https://ghproxy.net/https://github.com/git-lfs/git-lfs/releases/download/v$gitLfsVersion/git-lfs-windows-v$gitLfsVersion.exe"
-)
+    $gitLfsDownloadUrls = @(
+        "https://github.com/git-lfs/git-lfs/releases/download/v$gitLfsVersion/git-lfs-windows-v$gitLfsVersion.exe",
+        "https://ghproxy.net/https://github.com/git-lfs/git-lfs/releases/download/v$gitLfsVersion/git-lfs-windows-v$gitLfsVersion.exe"
+    )
 
-$lfsDownloadSuccess = $false
+    $lfsDownloadSuccess = $false
 
-foreach ($gitLfsUrl in $gitLfsDownloadUrls) {
-    Write-Host "  Downloading from $gitLfsUrl..."
-    try {
-        $headers = @{
-            "User-Agent" = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    foreach ($gitLfsUrl in $gitLfsDownloadUrls) {
+        Write-Host "  Downloading from $gitLfsUrl..."
+        try {
+            $headers = @{
+                "User-Agent" = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            }
+            Invoke-WebRequest -Uri $gitLfsUrl -OutFile $gitLfsInstaller -UseBasicParsing -Headers $headers -ErrorAction Stop
+            $lfsDownloadSuccess = $true
+            if ($gitLfsUrl.Contains("ghproxy")) {
+                $useMirror = $true
+            }
+            break
+        } catch {
+            Write-Host "  Download failed, trying next URL..."
         }
-        Invoke-WebRequest -Uri $gitLfsUrl -OutFile $gitLfsInstaller -UseBasicParsing -Headers $headers -ErrorAction Stop
-        $lfsDownloadSuccess = $true
-        if ($gitLfsUrl.Contains("ghproxy")) {
-            $useMirror = $true
-        }
-        break
-    } catch {
-        Write-Host "  Download failed, trying next URL..."
     }
-}
 
-if ($lfsDownloadSuccess) {
-    Write-Host "  Installing..."
-    Start-Process -FilePath $gitLfsInstaller -ArgumentList "/S" -Wait -NoNewWindow
-    Remove-Item $gitLfsInstaller -Force
-    git lfs install
-    Write-Success "Git-LFS $gitLfsVersion installation completed"
+    if ($lfsDownloadSuccess) {
+        Write-Host "  Installing..."
+        Start-Process -FilePath $gitLfsInstaller -ArgumentList "/S" -Wait -NoNewWindow
+        Remove-Item $gitLfsInstaller -Force
+        git lfs install
+        Write-Success "Git-LFS $gitLfsVersion installation completed"
+    } else {
+        Write-Warn "Automatic Git-LFS installation failed"
+        Write-Warn "Please install manually from: https://git-lfs.com/"
+        $useMirror = $true
+    }
 } else {
-    Write-Warn "Automatic Git-LFS installation failed"
-    Write-Warn "Please install manually from: https://git-lfs.com/"
-    $useMirror = $true
+    Write-Host "  Skipped (use -WithGitLfs to install)" -ForegroundColor Yellow
 }
 
 Write-Host ""
@@ -555,14 +560,14 @@ $env:MODELSCOPE_API_URL = "https://api.modelscope.cn"
 Write-Success "ModelScope API URL configured"
 
 Write-Host ""
-Write-Host "[12/16] Installing OpenVINO..." -ForegroundColor White
+Write-Host "[12/16] Installing OpenVINO 2024.6.0..." -ForegroundColor White
 
-Write-Host "  Installing openvino and openvino-dev..."
+Write-Host "  Installing openvino==2024.6.0 and openvino-dev==2024.6.0..."
 try {
-    pip install openvino openvino-dev --quiet
+    pip install openvino==2024.6.0 openvino-dev==2024.6.0 --quiet
     $ovVersion = python -c "import openvino; print(openvino.__version__)"
     Write-Host "  OpenVINO version: $ovVersion"
-    Write-Success "OpenVINO installation completed"
+    Write-Success "OpenVINO 2024.6.0 installation completed"
 } catch {
     Write-Warn "OpenVINO installation failed"
 }
@@ -795,7 +800,11 @@ if ($isUltra) {
 Write-Host "✓ GPU device and driver check completed" -ForegroundColor Green
 Write-Host "✓ Python installed and pip mirror configured" -ForegroundColor Green
 Write-Host "✓ Git installed and ghproxy.net mirror configured" -ForegroundColor Green
-Write-Host "✓ Git-LFS installed" -ForegroundColor Green
+if ($WithGitLfs) {
+    Write-Host "✓ Git-LFS installed" -ForegroundColor Green
+} else {
+    Write-Host "○ Git-LFS skipped (optional, use -WithGitLfs)" -ForegroundColor Gray
+}
 if ($InstallCmake -or $FullInstall) {
     Write-Host "✓ CMake installed" -ForegroundColor Green
 } else {
@@ -807,7 +816,7 @@ if ($InstallVS -or $FullInstall) {
     Write-Host "○ Visual Studio skipped (optional)" -ForegroundColor Gray
 }
 Write-Host "✓ ModelScope installed and HF mirror configured" -ForegroundColor Green
-Write-Host "✓ OpenVINO installed" -ForegroundColor Green
+Write-Host "✓ OpenVINO 2024.6.0 installed" -ForegroundColor Green
 Write-Host "✓ PyTorch CPU version installed" -ForegroundColor Green
 Write-Host "✓ Device availability test completed" -ForegroundColor Green
 Write-Host "✓ Environment variables updated" -ForegroundColor Green

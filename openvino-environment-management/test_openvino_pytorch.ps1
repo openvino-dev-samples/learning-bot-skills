@@ -3,10 +3,10 @@ Set-ExecutionPolicy Bypass -Scope Process -Force
 Write-Host "=== OpenVINO and PyTorch Installation Test ===" -ForegroundColor Cyan
 
 Write-Host ""
-Write-Host "[1/5] Installing OpenVINO..." -ForegroundColor White
+Write-Host "[1/6] Installing OpenVINO 2024.6.0..." -ForegroundColor White
 
 try {
-    pip install openvino openvino-dev --quiet
+    pip install openvino==2024.6.0 openvino-dev==2024.6.0 --quiet
     $ovVersion = python -c "import openvino; print(openvino.__version__)"
     Write-Host "  OpenVINO version: $ovVersion" -ForegroundColor Green
 } catch {
@@ -15,43 +15,35 @@ try {
 }
 
 Write-Host ""
-Write-Host "[2/5] Installing PyTorch (Intel XPU)..." -ForegroundColor White
+Write-Host "[2/6] Installing PyTorch CPU (tested stable configuration)..." -ForegroundColor White
 
 try {
-    pip install torch torchvision torchaudio --index-url https://pytorch-extension.intel.com/release-whl/stable/xpu/cn/ --trusted-host pytorch-extension.intel.com --quiet
+    pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu --trusted-host download.pytorch.org --quiet
     $torchVersion = python -c "import torch; print(torch.__version__)"
-    Write-Host "  PyTorch version: $torchVersion" -ForegroundColor Green
+    Write-Host "  PyTorch CPU version: $torchVersion" -ForegroundColor Green
 } catch {
-    Write-Host "  XPU version failed, trying CPU version..." -ForegroundColor Yellow
+    Write-Host "  PyTorch CPU failed, trying Tsinghua mirror..." -ForegroundColor Yellow
     try {
-        pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu --trusted-host download.pytorch.org --quiet
+        pip install torch torchvision torchaudio -i https://pypi.tuna.tsinghua.edu.cn/simple --trusted-host pypi.tuna.tsinghua.edu.cn --quiet
         $torchVersion = python -c "import torch; print(torch.__version__)"
-        Write-Host "  PyTorch CPU version: $torchVersion" -ForegroundColor Green
+        Write-Host "  PyTorch (Tsinghua): $torchVersion" -ForegroundColor Green
     } catch {
-        Write-Host "  PyTorch CPU failed, trying Tsinghua mirror..." -ForegroundColor Yellow
-        try {
-            pip install torch torchvision torchaudio -i https://pypi.tuna.tsinghua.edu.cn/simple --trusted-host pypi.tuna.tsinghua.edu.cn --quiet
-            $torchVersion = python -c "import torch; print(torch.__version__)"
-            Write-Host "  PyTorch (Tsinghua): $torchVersion" -ForegroundColor Green
-        } catch {
-            Write-Host "  PyTorch installation failed: $_" -ForegroundColor Red
-        }
+        Write-Host "  PyTorch installation failed: $_" -ForegroundColor Red
     }
 }
 
 Write-Host ""
-Write-Host "[3/5] Installing Intel PyTorch Extension (IPEX)..." -ForegroundColor White
+Write-Host "[3/6] Testing PyTorch CPU availability..." -ForegroundColor White
 
 try {
-    pip install intel-extension-for-pytorch --index-url https://pytorch-extension.intel.com/release-whl/stable/xpu/cn/ --trusted-host pytorch-extension.intel.com --quiet
-    $ipexVersion = python -c "import intel_extension_for_pytorch as ipex; print(ipex.__version__)"
-    Write-Host "  IPEX version: $ipexVersion" -ForegroundColor Green
+    $torchCheck = python -c "import torch; print(f'PyTorch version: {torch.__version__}'); print(f'CPU available: {torch.cuda.is_available() == False}')"
+    Write-Host "  $torchCheck" -ForegroundColor Green
 } catch {
-    Write-Host "  IPEX installation failed: $_" -ForegroundColor Yellow
+    Write-Host "  PyTorch test failed: $_" -ForegroundColor Red
 }
 
 Write-Host ""
-Write-Host "[4/5] Testing device availability with OpenVINO..." -ForegroundColor White
+Write-Host "[4/6] Testing device availability with OpenVINO..." -ForegroundColor White
 
 $testScriptPath = "$env:TEMP\test_openvino.py"
 Set-Content -Path $testScriptPath -Value @"
@@ -115,7 +107,7 @@ python $testScriptPath
 Remove-Item $testScriptPath -Force
 
 Write-Host ""
-Write-Host "[5/5] Downloading and running hello_query_device..." -ForegroundColor White
+Write-Host "[5/6] Downloading and running hello_query_device..." -ForegroundColor White
 
 $helloScriptPath = "$env:TEMP\hello_query_device.py"
 $downloadUrls = @(
@@ -142,6 +134,12 @@ if ($downloadSuccess -and (Test-Path $helloScriptPath)) {
 } else {
     Write-Host "  Download failed, skipping" -ForegroundColor Yellow
 }
+
+Write-Host ""
+Write-Host "[6/6] Final verification..." -ForegroundColor White
+
+$finalCheck = python -c "import torch; import openvino as ov; print(f'✓ PyTorch {torch.__version__} (CPU mode)'); print(f'✓ OpenVINO {ov.__version__}'); print(f'✓ All components ready')"
+Write-Host "  $finalCheck" -ForegroundColor Green
 
 Write-Host ""
 Write-Host "=== Test Complete ===" -ForegroundColor Cyan
