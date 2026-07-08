@@ -43,8 +43,11 @@ The spine, end to end:
 | `--china` | pip=tuna, HF=hf-mirror, notebooks=gitcode; no network probing |
 | Persisted dirs (outside sandbox) | `%USERPROFILE%\.openvino\`: `venv-pipeopt\`, `openvino_notebooks\`, `ir\<slug>\`, `log\` |
 
-Deps (`openvino, openvino-genai, nncf, optimum-intel, fastapi, uvicorn, pydantic, …`) install into the
-persisted venv from `requirements.txt` on first run.
+Deps install into the persisted venv on first run: a **minimal core** the skill's own scripts need
+(`openvino, openvino-genai, openvino-tokenizers, nncf, optimum-intel, fastapi, uvicorn, pydantic,
+nbformat, numpy`) **plus each selected notebook's own `requirements.txt`** (`notebooks/<slug>/requirements.txt`),
+so model-specific deps always match the chosen notebook. There is no static skill-level requirements
+file — dependencies are resolved from the notebook(s) you build.
 
 ---
 
@@ -148,3 +151,12 @@ Exit `0` ok / `1` error. Idempotent: re-runs reuse cloned repo + existing IR (`f
 ## Does / does not
 - **Does:** scaffold + benchmark + serve repo-based pipelines; per-stage device/precision; multi-notebook compose; offline/`--china`; provide the `[SKILL_RESULT]` + client/server conventions.
 - **Does not:** invent model architectures; hardcode model IDs; cloud/non-Intel; fake outputs for unwired families.
+
+## Testing
+Run the offline smoke test (no models, no clone, no Intel hardware needed) to validate the
+orchestration — resolve → optimize `--dry-run` → bench `--dry-run` → client `--help` → `--status`:
+```powershell
+powershell -ExecutionPolicy Bypass -File test_pipeline.ps1
+```
+Exit code `0` = all checks passed. It builds a tiny synthetic notebooks repo in a temp dir and
+asserts the discovered stages, plan file, and `[SKILL_RESULT]` blocks.

@@ -13,7 +13,6 @@
     run.ps1 --dry-run --slug vlm-chatbot     # resolve + plan only, no downloads
     run.ps1 --status | --stop | --debug
 #>
-[CmdletBinding()]
 param(
   [string]$slug,
   [string]$goal,
@@ -125,6 +124,18 @@ if ($china) {
   $RepoUrl = "https://github.com/openvinotoolkit/openvino_notebooks.git"
 }
 
+# ---------------- clone / update notebooks repo (needed BEFORE resolve) ----------------
+# Resolve discovers stages from notebooks/<slug>/, and deps come from each notebook's own
+# requirements.txt, so the repo must exist first. Shallow clone; LFS blobs skipped.
+$env:GIT_LFS_SKIP_SMUDGE = "1"
+if (-not (Test-Path (Join-Path $RepoDir "notebooks"))) {
+  Log "Cloning openvino_notebooks (shallow, latest) ..."
+  & git clone --depth 1 --branch latest $RepoUrl $RepoDir
+} else {
+  Log "Updating notebooks repo ..."
+  & git -C $RepoDir pull --ff-only 2>$null
+}
+
 # ---------------- resolve (always; dry-run stops here) ----------------
 $py0 = Get-Python
 $PlanJson = Join-Path $IrRoot "_resolved.json"
@@ -153,28 +164,42 @@ if ($dryrun) {
   exit 0
 }
 
-# ---------------- venv ----------------
+# ---------------- venv + deps (minimal core + per-notebook requirements) ----------------
 if (-not (Test-Path (Join-Path $VenvDir "Scripts\python.exe"))) {
   Log "Creating venv at $VenvDir ..."
   & python -m venv $VenvDir
 }
 $Py = Get-Python
-Log "Installing deps (this can take a while on first run)..."
 & $Py -m pip install --upgrade pip @PipArgs | Out-Null
-& $Py -m pip install @PipArgs -r (Join-Path $ScriptDir "..\requirements.txt")
+
+# Minimal core framework deps the skill's OWN scripts need (export IR / NNCF / serve).
+# Everything model-specific is pulled from the selected notebook(s)' own requirements.txt,
+# so the skill stays generic and never pins model libs the chosen notebook doesn't use.
+$CoreDeps = @(
+  "openvino>=2025.0", "openvino-genai>=2025.0", "openvino-tokenizers>=2025.0",
+  "nncf>=2.14", "optimum-intel[openvino]>=1.21",
+  "nbformat>=5.10", "numpy>=1.26",
+  "fastapi>=0.115", "uvicorn>=0.30", "pydantic>=2.7"
+)
+Log "Installing minimal core framework deps ..."
+& $Py -m pip install @PipArgs @CoreDeps
 if ($LASTEXITCODE -ne 0) {
-  Emit-Result([ordered]@{ status="error"; note="pip install failed (see above)"; hint="check --china mirror / network" })
+  Emit-Result([ordered]@{ status="error"; note="core dep install failed (see above)"; hint="check --china mirror / network" })
   exit 1
 }
 
-# ---------------- clone / update notebooks repo ----------------
-$env:GIT_LFS_SKIP_SMUDGE = "1"
-if (-not (Test-Path (Join-Path $RepoDir "notebooks"))) {
-  Log "Cloning openvino_notebooks (shallow, latest) ..."
-  & git clone --depth 1 --branch latest $RepoUrl $RepoDir
-} else {
-  Log "Updating notebooks repo ..."
-  & git -C $RepoDir pull --ff-only 2>$null
+# Install each selected notebook's own requirements.txt so model-specific deps match the notebook.
+foreach ($sl in $resolved.slugs) {
+  $req = Join-Path $RepoDir "notebooks\$sl\requirements.txt"
+  if (Test-Path $req) {
+    Log "Installing notebook requirements for '$sl' -> $req"
+    & $Py -m pip install @PipArgs -r $req
+    if ($LASTEXITCODE -ne 0) {
+      Log "WARN: some deps in '$sl' requirements.txt failed to install; continuing (notebook may pin conflicting versions)."
+    }
+  } else {
+    Log "No requirements.txt for notebook '$sl' (skipping)."
+  }
 }
 
 # ---------------- optimize ----------------

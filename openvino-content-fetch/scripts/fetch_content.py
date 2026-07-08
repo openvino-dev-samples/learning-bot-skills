@@ -5,7 +5,9 @@ import re
 import sys
 import json
 import urllib.request
-from bs4 import BeautifulSoup
+
+# NOTE: BeautifulSoup is imported lazily inside the HTML-scraping parsers only, so that the
+# GitHub-live listing, model download, and --help paths run stdlib-only (no bs4 required).
 
 # Standard outputs should go to stdout, logs should go to stderr to avoid polluting SKILL_RESULT.
 def log(msg):
@@ -972,6 +974,7 @@ def parse_modelscope_zone():
     req = urllib.request.Request("https://modelscope.cn/brand/view/AI_PC", headers=headers)
     
     try:
+        from bs4 import BeautifulSoup
         with urllib.request.urlopen(req, timeout=10) as response:
             html = response.read()
         soup = BeautifulSoup(html, "lxml")
@@ -1016,6 +1019,7 @@ def parse_csdn_zone():
     req = urllib.request.Request(url, headers=headers)
     
     try:
+        from bs4 import BeautifulSoup
         with urllib.request.urlopen(req, timeout=10) as response:
             html = response.read()
         soup = BeautifulSoup(html, "lxml")

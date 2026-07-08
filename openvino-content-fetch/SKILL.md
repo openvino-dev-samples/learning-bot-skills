@@ -110,3 +110,12 @@ Programmatic model lookup / download on ModelScope:
 - `GET /models/{owner}/{repo_name}` — model details (files, size, license)
 
 **OpenAPI docs:** https://modelscope.cn/docs/openapi
+
+## Testing
+Run the offline smoke test (uses stdlib-only paths + seeded fallbacks; no venv, bs4, or network
+required) to validate the fetch and download contracts:
+```powershell
+powershell -ExecutionPolicy Bypass -File test_content_fetch.ps1
+```
+Exit code `0` = all checks passed. It asserts a well-formed `[SKILL_RESULT]` (status/count) for each
+source and the `action=download` contract.
