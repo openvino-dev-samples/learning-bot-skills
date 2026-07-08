@@ -1073,6 +1073,51 @@ def parse_csdn_zone():
         log(f"Warning: CSDN fetch failed ({e}). Activating expert fallback dataset...")
         return {"status": "ok", "items": SEEDED_CSDN}
 
+# ----------------- Model Download (ModelScope) -----------------
+
+def _resolve_model_id(model_id):
+    """Return the ModelScope repo id. Prefer the OpenVINO org for pre-converted IR when the caller
+    passes a bare model name (no owner/ prefix)."""
+    if "/" in model_id:
+        return model_id
+    return f"OpenVINO/{model_id}"
+
+
+def download_model(model_id, out_dir=None, china=False):
+    """Download a model / pre-converted OpenVINO IR from ModelScope via snapshot_download.
+
+    Prefers the OpenVINO organization (pre-converted IR) when a bare id is given. Reports the local
+    path and whether OpenVINO IR (openvino_model.xml) is present.
+    """
+    try:
+        from modelscope import snapshot_download
+    except Exception as e:
+        log(f"modelscope SDK not importable ({e}). Install with: pip install modelscope")
+        return {"status": "error", "note": "modelscope SDK missing"}
+
+    repo_id = _resolve_model_id(model_id)
+    if not out_dir:
+        base = os.path.join(os.environ.get("USERPROFILE", os.path.expanduser("~")), ".openvino", "models")
+        out_dir = os.path.join(base, repo_id.replace("/", "_"))
+    os.makedirs(out_dir, exist_ok=True)
+
+    log(f"Downloading '{repo_id}' -> {out_dir} (china={china}) ...")
+    try:
+        local_dir = snapshot_download(repo_id, local_dir=out_dir)
+    except Exception as e:
+        log(f"Download failed for '{repo_id}' ({e}).")
+        return {"status": "error", "note": f"download failed: {e}", "model_id": repo_id}
+
+    has_ir = False
+    for root, _dirs, files in os.walk(local_dir):
+        if any(f.endswith(".xml") and "openvino" in f.lower() for f in files) or "openvino_model.xml" in files:
+            has_ir = True
+            break
+
+    log(f"Downloaded '{repo_id}' to {local_dir} (has_ir={has_ir}).")
+    return {"status": "ok", "model_id": repo_id, "local_dir": local_dir, "has_ir": has_ir}
+
+
 # ----------------- Main Entry Point -----------------
 
 def main():
@@ -1085,9 +1130,28 @@ def main():
                         help="Use Chinese mirrors and local endpoints.")
     parser.add_argument("--out", type=str, default=None,
                         help="Write the full JSON result to a specified file.")
-    
+    parser.add_argument("--download", type=str, default=None,
+                        help="Model id to download from ModelScope (triggers download mode).")
+    parser.add_argument("--out-dir", type=str, default=None,
+                        help="Local directory to download the model / IR into.")
+
     args = parser.parse_args()
-    
+
+    # ---- Download mode: resolve + fetch a model / IR, emit the download contract, and exit. ----
+    if args.download:
+        log(f"Starting Model Download [model_id={args.download}, china={args.china}]")
+        dl = download_model(args.download, out_dir=args.out_dir, china=args.china)
+        print("[SKILL_RESULT]")
+        print(f"status={dl.get('status', 'error')}")
+        print("action=download")
+        print(f"model_id={dl.get('model_id', args.download)}")
+        print(f"local_dir={dl.get('local_dir', '')}")
+        print(f"has_ir={str(dl.get('has_ir', False)).lower()}")
+        if dl.get("note"):
+            print(f"note={dl['note']}")
+        print("[/SKILL_RESULT]")
+        sys.exit(0 if dl.get("status") == "ok" else 1)
+
     log(f"Starting Content Fetch Skill [source={args.source}, china={args.china}]")
     
     final_result = {

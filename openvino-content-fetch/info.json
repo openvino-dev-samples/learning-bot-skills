@@ -10,5 +10,10 @@
   "sources": {
     "modelscope": "https://modelscope.cn/brand/view/AI_PC",
     "csdn": "https://inteldevzone.blog.csdn.net/?type=lately"
+  },
+  "model_sources": {
+    "modelscope_openvino_org": "https://www.modelscope.cn/organization/OpenVINO",
+    "modelscope_aipc_models": "https://modelscope.cn/brand/view/AI_PC?branch=2&tree=1",
+    "intel_model_hub": "https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/model-hub.html"
   }
 }

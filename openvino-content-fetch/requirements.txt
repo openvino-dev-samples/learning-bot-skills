@@ -2,3 +2,4 @@ requests>=2.31
 beautifulsoup4>=4.12
 nbformat>=5.10
 lxml>=5.1
+modelscope>=1.9

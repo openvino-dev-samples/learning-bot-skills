@@ -7,6 +7,7 @@
   Usage:
     run.ps1 -Source github [--china]
     run.ps1 -Source all [--china] [--out C:\path\to\out.json]
+    run.ps1 -Download "Qwen2.5-7B-Instruct-INT4-OV" [-OutDir C:\models\qwen] [--china]
     run.ps1 -Status
     run.ps1 -ShowDebug
 #>
@@ -16,6 +17,8 @@ param(
   [switch]$China,
   [string]$RepoDir,
   [string]$Out,
+  [string]$Download,
+  [string]$OutDir,
   [switch]$Status,
   [switch]$ShowDebug
 )
@@ -86,6 +89,16 @@ Log "Installing deps (first-run setup)..."
 if ($LASTEXITCODE -ne 0) {
   Emit-Result([ordered]@{ status="error"; note="pip install failed (see above)"; hint="check --china mirror / network" })
   exit 1
+}
+
+# ---------------- model download mode ----------------
+if ($Download) {
+  Log "Download mode: model '$Download'"
+  $dlArgs = @((Join-Path $ScriptDir "fetch_content.py"), "--download", $Download)
+  if ($OutDir) { $dlArgs += @("--out-dir", $OutDir) }
+  if ($China) { $dlArgs += "--china" }
+  & $Py @dlArgs
+  exit $LASTEXITCODE
 }
 
 # ---------------- notebooks repo check ----------------
