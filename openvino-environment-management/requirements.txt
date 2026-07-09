@@ -1,5 +1,5 @@
-# Python packages this skill installs into the system Python (via intel_aipc_env_setup.ps1).
-# Declared here so the skill loader recognizes them as expected dependencies.
+# 本技能通过 intel_aipc_env_setup.ps1 安装到系统 Python 的 Python 包。
+# 在此声明以便技能加载器识别它们为预期依赖项。
 modelscope
 openvino
 torch

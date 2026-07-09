@@ -1,98 +1,98 @@
 ---
 name: "openvino-environment-management"
-description: "Two-phase environment setup for Intel AIPC development on Windows. Phase 1: Run precheck_env.ps1 (PC1-PC10) to assess current state. Phase 2: Run intel_aipc_env_setup.ps1 (ST1-ST9) for missing components. Pre-checks verify: OS, Intel CPU, drivers, Python, pip mirror, Git, Git mirror, HF/ModelScope, OpenVINO, PyTorch. Use -China for domestic mirrors. CMake (ST8) and VS (ST9) are optional."
+description: "Intel AIPC 开发环境在 Windows 上的两阶段配置。阶段1：运行 precheck_env.ps1 (PC1-PC10) 评估当前状态。阶段2：运行 intel_aipc_env_setup.ps1 (ST1-ST9) 安装缺失组件。预检查验证：操作系统、Intel CPU、驱动、Python、pip 镜像、Git、Git 镜像、HF/ModelScope、OpenVINO、PyTorch。使用 -China 参数启用国内镜像。CMake (ST8) 和 VS (ST9) 为可选组件。"
 ---
 
-# Intel AIPC Environment Management
+# Intel AIPC 环境管理
 
-## Agent Usage Guide
+## 智能体使用指南
 
-This skill is designed for **AI agents** to set up Intel AIPC development environments on Windows. Follow this two-phase workflow:
+本技能专为**AI 智能体**设计，用于在 Windows 上配置 Intel AIPC 开发环境。请遵循以下两阶段工作流程：
 
-### Phase 1: Pre-Check (Diagnose)
-Run the standalone pre-check script first to assess the current environment. This helps identify what needs to be installed or configured.
+### 阶段1：预检查（诊断）
+首先运行独立的预检查脚本评估当前环境状态。这有助于确定需要安装或配置的组件。
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File precheck_env.ps1
 ```
 
-The script outputs a JSON summary between `[AGENT_OUTPUT]` and `[/AGENT_OUTPUT]` tags for programmatic parsing.
+脚本会在 `[AGENT_OUTPUT]` 和 `[/AGENT_OUTPUT]` 标签之间输出 JSON 摘要，便于程序化解析。
 
-### Phase 2: Setup (Install/Configure)
-Based on pre-check results, run the setup script for missing components.
+### 阶段2：配置（安装/配置）
+根据预检查结果，运行配置脚本安装缺失组件。
 
 ```powershell
-# Basic setup (no mirrors)
+# 基础配置（不使用镜像）
 powershell -ExecutionPolicy Bypass -File intel_aipc_env_setup.ps1
 
-# With domestic mirrors (Mainland China)
+# 使用国内镜像（中国大陆）
 powershell -ExecutionPolicy Bypass -File intel_aipc_env_setup.ps1 -China
 
-# Include optional components
+# 包含可选组件
 powershell -ExecutionPolicy Bypass -File intel_aipc_env_setup.ps1 -InstallCmake
 powershell -ExecutionPolicy Bypass -File intel_aipc_env_setup.ps1 -InstallVS
 powershell -ExecutionPolicy Bypass -File intel_aipc_env_setup.ps1 -FullInstall
 ```
 
-## Script Parameters
+## 脚本参数
 
-| Parameter | Description | Default |
+| 参数 | 说明 | 默认值 |
 |-----------|-------------|---------|
-| `-InstallCmake` | Install CMake | `$false` |
-| `-InstallVS` | Install Visual Studio Community Edition | `$false` |
-| `-FullInstall` | Install all components (including optional) | `$false` |
-| `-China` | Use domestic mirrors (Tsinghua pip + ghproxy.net for github.com) | `$false` |
+| `-InstallCmake` | 安装 CMake | `$false` |
+| `-InstallVS` | 安装 Visual Studio Community 版本 | `$false` |
+| `-FullInstall` | 安装所有组件（包括可选组件） | `$false` |
+| `-China` | 使用国内镜像（清华 pip 镜像 + ghproxy.net 用于 github.com） | `$false` |
 
-## Pre-Check Phase (PC1-PC10)
+## 预检查阶段 (PC1-PC10)
 
-### PC1: Check Windows Operating System
-**Purpose**: Verify the system is running Windows.
-**Action if FAIL**: Exit - this script only supports Windows.
+### PC1: 检查 Windows 操作系统
+**目的**：验证系统是否运行 Windows。
+**失败时操作**：退出 - 此脚本仅支持 Windows。
 
-### PC2: Check Intel Processor
-**Purpose**: Verify Intel CPU is present.
-**Action if FAIL**: Exit - only Intel processors are supported.
-**Action if WARN**: Continue but note limited iGPU/NPU performance.
+### PC2: 检查 Intel 处理器
+**目的**：验证是否存在 Intel CPU。
+**失败时操作**：退出 - 仅支持 Intel 处理器。
+**警告时操作**：继续但记录 iGPU/NPU 性能可能受限。
 
-### PC3: Check Graphics Drivers
-**Purpose**: Verify Intel graphics driver is installed.
-**Action if WARN**: Install/update Intel driver manually.
+### PC3: 检查图形驱动
+**目的**：验证 Intel 图形驱动是否已安装。
+**警告时操作**：手动安装/更新 Intel 驱动。
 
-### PC4: Check Python Installation
-**Purpose**: Verify Python 3.10+ is installed with pip.
-**Action if FAIL/WARN**: Run [ST1](#st1-install-python).
+### PC4: 检查 Python 安装
+**目的**：验证是否已安装 Python 3.10+ 和 pip。
+**失败/警告时操作**：运行 [ST1](#st1-安装-python)。
 
-### PC5: Check pip Mirror Configuration
-**Purpose**: Verify Tsinghua mirror is configured.
-**Action if WARN**: Run [ST2](#st2-configure-pip-mirror) with `-China`.
+### PC5: 检查 pip 镜像配置
+**目的**：验证是否已配置清华镜像。
+**警告时操作**：使用 `-China` 参数运行 [ST2](#st2-配置-pip-镜像)。
 
-### PC6: Check Git Installation
-**Purpose**: Verify Git is installed.
-**Action if FAIL**: Run [ST3](#st3-install-git).
+### PC6: 检查 Git 安装
+**目的**：验证是否已安装 Git。
+**失败时操作**：运行 [ST3](#st3-安装-git)。
 
-### PC7: Check Git Mirror Configuration
-**Purpose**: Verify ghproxy mirror is configured.
-**Action if WARN**: Run [ST4](#st4-configure-git-mirror) with `-China`.
+### PC7: 检查 Git 镜像配置
+**目的**：验证是否已配置 ghproxy 镜像。
+**警告时操作**：使用 `-China` 参数运行 [ST4](#st4-配置-git-镜像)。
 
-### PC8: Check HF_ENDPOINT and ModelScope
-**Purpose**: Verify Hugging Face and ModelScope mirrors are set.
-**Action if WARN**: Run [ST5](#st5-install-modelscope-and-configure-mirrors).
+### PC8: 检查 HF_ENDPOINT 和 ModelScope
+**目的**：验证 Hugging Face 和 ModelScope 镜像是否已设置。
+**警告时操作**：运行 [ST5](#st5-安装-modelscope-并配置镜像)。
 
-### PC9: Check OpenVINO Installation
-**Purpose**: Verify OpenVINO is installed.
-**Action if WARN**: Run [ST6](#st6-install-openvino).
+### PC9: 检查 OpenVINO 安装
+**目的**：验证是否已安装 OpenVINO。
+**警告时操作**：运行 [ST6](#st6-安装-openvino)。
 
-### PC10: Check PyTorch Installation
-**Purpose**: Verify PyTorch is installed.
-**Action if WARN**: Run [ST7](#st7-install-pytorch-cpu).
+### PC10: 检查 PyTorch 安装
+**目的**：验证是否已安装 PyTorch。
+**警告时操作**：运行 [ST7](#st7-安装-pytorch-cpu)。
 
-## Setup Phase (ST1-ST9)
+## 配置阶段 (ST1-ST9)
 
-### ST1: Install Python
-**Triggers**: PC4 FAIL/WARN
+### ST1: 安装 Python
+**触发条件**：PC4 失败/警告
 
 ```powershell
-Write-Host "`n=== Installing Python 3.12 ==="
+Write-Host "`n=== 正在安装 Python 3.12 ==="
 
 $pythonUrl = "https://www.python.org/ftp/python/3.12.0/python-3.12.0-amd64.exe"
 $pythonInstaller = "$env:TEMP\python-3.12.0-amd64.exe"
@@ -113,18 +113,18 @@ if ($currentPath -notlike "*$pythonTargetDir*") {
     [Environment]::SetEnvironmentVariable("PATH", "$currentPath;$pythonTargetDir;$pythonTargetDir\Scripts", "User")
 }
 
-Write-Host "Python installation completed. Verifying..."
+Write-Host "Python 安装完成。正在验证..."
 python --version
 pip --version
 ```
 
-**Notes**: Installs Python 3.12 to `%LOCALAPPDATA%\Programs\Python\Python312`, no admin rights needed.
+**注意**：将 Python 3.12 安装到 `%LOCALAPPDATA%\Programs\Python\Python312`，无需管理员权限。
 
-### ST2: Configure pip Mirror
-**Triggers**: PC5 WARN, `-China` flag
+### ST2: 配置 pip 镜像
+**触发条件**：PC5 警告，`-China` 标志
 
 ```powershell
-Write-Host "`n=== Configuring pip domestic mirror ==="
+Write-Host "`n=== 正在配置 pip 国内镜像 ==="
 
 $pipConfigDir = "$env:APPDATA\pip"
 if (-not (Test-Path $pipConfigDir)) {
@@ -145,16 +145,16 @@ trusted-host = pypi.tuna.tsinghua.edu.cn
 
 Set-Content -Path $pipIni -Value $pipConfig -Encoding UTF8
 
-Write-Host "pip mirror configured to Tsinghua University mirror."
+Write-Host "pip 镜像已配置为清华大学镜像。"
 ```
 
-**Notes**: Configures Tsinghua University mirror for pip.
+**注意**：为 pip 配置清华大学镜像。
 
-### ST3: Install Git
-**Triggers**: PC6 FAIL
+### ST3: 安装 Git
+**触发条件**：PC6 失败
 
 ```powershell
-Write-Host "`n=== Installing Git ==="
+Write-Host "`n=== 正在安装 Git ==="
 
 $gitVersion = "2.55.0.windows.2"
 $gitInstaller = "$env:TEMP\PortableGit-2.55.0.2-64-bit.7z.exe"
@@ -167,7 +167,7 @@ $gitDownloadUrls = @(
 
 $downloadSuccess = $false
 foreach ($gitUrl in $gitDownloadUrls) {
-    Write-Host "  Downloading from $gitUrl..."
+    Write-Host "  正在从 $gitUrl 下载..."
     try {
         $headers = @{
             "User-Agent" = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
@@ -176,7 +176,7 @@ foreach ($gitUrl in $gitDownloadUrls) {
         $downloadSuccess = $true
         break
     } catch {
-        Write-Host "  Download failed, trying next URL..."
+        Write-Host "  下载失败，尝试下一个 URL..."
     }
 }
 
@@ -194,91 +194,91 @@ if ($downloadSuccess) {
     }
 }
 
-Write-Host "Git installation completed. Verifying..."
+Write-Host "Git 安装完成。正在验证..."
 git --version
 ```
 
-**Notes**: Installs Git to `%LOCALAPPDATA%\Programs\Git`, no admin rights needed.
+**注意**：将 Git 安装到 `%LOCALAPPDATA%\Programs\Git`，无需管理员权限。
 
-### ST4: Configure Git Mirror
-**Triggers**: PC7 WARN, `-China` flag
+### ST4: 配置 Git 镜像
+**触发条件**：PC7 警告，`-China` 标志
 
 ```powershell
-Write-Host "`n=== Configuring Git domestic mirror ==="
+Write-Host "`n=== 正在配置 Git 国内镜像 ==="
 
 git config --global url."https://ghproxy.net/https://github.com/".insteadOf "https://github.com/"
 
 $ghProxyConfig = git config --global --get url."https://ghproxy.net/https://github.com/".insteadOf
 if ($ghProxyConfig -eq "https://github.com/") {
-    Write-Host "Git mirror configured to ghproxy.net (for github.com only)."
+    Write-Host "Git 镜像已配置为 ghproxy.net（仅用于 github.com）。"
 } else {
-    Write-Host "Git mirror configuration may have failed."
+    Write-Host "Git 镜像配置可能失败。"
 }
 ```
 
-**Notes**: Configures ghproxy.net for github.com access.
+**注意**：为 github.com 访问配置 ghproxy.net。
 
-### ST5: Install ModelScope and Configure Mirrors
-**Triggers**: PC8 WARN
+### ST5: 安装 ModelScope 并配置镜像
+**触发条件**：PC8 警告
 
 ```powershell
-Write-Host "`n=== Installing ModelScope ==="
+Write-Host "`n=== 正在安装 ModelScope ==="
 pip install modelscope
 
-Write-Host "`n=== Configuring Hugging Face Mirror ==="
+Write-Host "`n=== 正在配置 Hugging Face 镜像 ==="
 [Environment]::SetEnvironmentVariable("HF_ENDPOINT", "https://hf-mirror.com", "User")
 $env:HF_ENDPOINT = "https://hf-mirror.com"
 
-Write-Host "`n=== Configuring ModelScope API URL ==="
+Write-Host "`n=== 正在配置 ModelScope API URL ==="
 [Environment]::SetEnvironmentVariable("MODELSCOPE_API_URL", "https://api.modelscope.cn", "User")
 $env:MODELSCOPE_API_URL = "https://api.modelscope.cn"
 
-Write-Host "ModelScope installation completed, mirrors configured."
+Write-Host "ModelScope 安装完成，镜像已配置。"
 ```
 
-**Notes**: Installs ModelScope, sets HF_ENDPOINT and MODELSCOPE_API_URL.
+**注意**：安装 ModelScope，设置 HF_ENDPOINT 和 MODELSCOPE_API_URL。
 
-### ST6: Install OpenVINO
-**Triggers**: PC9 WARN
+### ST6: 安装 OpenVINO
+**触发条件**：PC9 警告
 
 ```powershell
-Write-Host "`n=== Installing OpenVINO ==="
+Write-Host "`n=== 正在安装 OpenVINO ==="
 
 pip install openvino
 
-Write-Host "OpenVINO installation completed. Verifying..."
-python -c "import openvino; print('OpenVINO version:', openvino.__version__)"
+Write-Host "OpenVINO 安装完成。正在验证..."
+python -c "import openvino; print('OpenVINO 版本:', openvino.__version__)"
 ```
 
-### ST7: Install PyTorch (CPU)
-**Triggers**: PC10 WARN
+### ST7: 安装 PyTorch (CPU)
+**触发条件**：PC10 警告
 
 ```powershell
-Write-Host "`n=== Installing PyTorch (CPU Version) ==="
+Write-Host "`n=== 正在安装 PyTorch (CPU 版本) ==="
 
 try {
     pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu --trusted-host download.pytorch.org
-    Write-Host "CPU version installed successfully"
+    Write-Host "CPU 版本安装成功"
 } catch {
-    Write-Host "CPU version installation failed, trying Tsinghua mirror..."
+    Write-Host "CPU 版本安装失败，尝试清华大学镜像..."
     pip install torch torchvision torchaudio -i https://pypi.tuna.tsinghua.edu.cn/simple --trusted-host pypi.tuna.tsinghua.edu.cn
-    Write-Host "Installed via Tsinghua mirror successfully"
+    Write-Host "通过清华大学镜像安装成功"
 }
 
-Write-Host "PyTorch installation completed. Verifying..."
-python -c "import torch; print('PyTorch version:', torch.__version__)"
+Write-Host "PyTorch 安装完成。正在验证..."
+python -c "import torch; print('PyTorch 版本:', torch.__version__)"
 ```
 
-**Important Notes**:
-- **Version Reference**: Specific PyTorch versions should be referenced from the target notebook project. This installation provides a base CPU environment only.
-- **Virtual Environment Strategy**: For actual deployment, create project-specific virtual environments instead of using Jupyter directly. Each reference notebook project should have its own isolated virtual environment with exact package versions matching the notebook requirements.
-- **No Jupyter in Deployment**: When the agent deploys actual projects referenced from notebooks, do not use Jupyter. Instead, create standalone scripts and run them in dedicated virtual environments.
+**重要说明**：
+- **版本参考**：特定的 PyTorch 版本应参考目标 notebook 项目。此安装仅提供基础 CPU 环境。
+- **虚拟环境策略**：实际部署时，应创建项目特定的虚拟环境，而不是直接使用 Jupyter。每个参考 notebook 项目应有自己独立的虚拟环境，包版本与 notebook 要求完全匹配。
+- **部署时不使用 Jupyter**：当智能体部署从 notebook 引用的实际项目时，不要使用 Jupyter。相反，应创建独立脚本并在专用虚拟环境中运行。
 
-### ST8: Install CMake (Optional)
-**Triggers**: `-InstallCmake` or `-FullInstall`
+### ST8: 安装 CMake（可选）
+**触发条件**：`-InstallCmake` 或 `-FullInstall`
 
 ```powershell
-Write-Host "`n=== Installing CMake (Optional) ==="
+Write-Host "`n=== 正在安装 CMake（可选） ==="
 
 $cmakeVersion = "4.3.4"
 $cmakeZip = "$env:TEMP\cmake-$cmakeVersion.zip"
@@ -291,7 +291,7 @@ $cmakeDownloadUrls = @(
 
 $downloadSuccess = $false
 foreach ($cmakeUrl in $cmakeDownloadUrls) {
-    Write-Host "Trying download: $cmakeUrl"
+    Write-Host "尝试下载: $cmakeUrl"
     try {
         $headers = @{
             "User-Agent" = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
@@ -300,7 +300,7 @@ foreach ($cmakeUrl in $cmakeDownloadUrls) {
         $downloadSuccess = $true
         break
     } catch {
-        Write-Host "Download failed, trying next URL..."
+        Write-Host "下载失败，尝试下一个 URL..."
     }
 }
 
@@ -331,22 +331,22 @@ if ($downloadSuccess) {
         [Environment]::SetEnvironmentVariable("PATH", $currentPath, "User")
     }
 
-    Write-Host "CMake installation completed. Verifying..."
+    Write-Host "CMake 安装完成。正在验证..."
     cmake --version
 } else {
-    Write-Host "All downloads failed. Please install manually."
+    Write-Host "所有下载均失败。请手动安装。"
 }
 ```
 
-**Notes**: Required for C++ project compilation.
+**注意**：C++ 项目编译所需。
 
-### ST9: Install Visual Studio (Optional)
-**Triggers**: `-InstallVS` or `-FullInstall`
+### ST9: 安装 Visual Studio（可选）
+**触发条件**：`-InstallVS` 或 `-FullInstall`
 
-> **⚠️ Important**: Requires administrator privileges.
+> **⚠️ 重要**：需要管理员权限。
 
 ```powershell
-Write-Host "`n=== Installing Visual Studio Community Edition (Optional) ==="
+Write-Host "`n=== 正在安装 Visual Studio Community Edition（可选） ==="
 
 $vsInstallerUrl = "https://aka.ms/vs/17/release/vs_community.exe"
 $vsInstaller = "$env:TEMP\vs_community.exe"
@@ -357,22 +357,22 @@ Start-Process -FilePath $vsInstaller -ArgumentList "--quiet --wait --norestart -
 
 Remove-Item $vsInstaller
 
-Write-Host "Visual Studio Community installation completed."
+Write-Host "Visual Studio Community 安装完成。"
 ```
 
-**Notes**: Requires administrator privileges, installs Desktop development with C++ workload.
+**注意**：需要管理员权限，安装 C++ 桌面开发工作负载。
 
-## Hardware Detection Standard
+## 硬件检测标准
 
-> **⚠️ Important**: When detecting CPU, GPU, NPU, or any hardware information, you **MUST** use the OpenVINO `hello_query_device.py` script as the primary method. Do NOT use PowerShell WMI/CIM queries as the final result.
+> **⚠️ 重要**：检测 CPU、GPU、NPU 或任何硬件信息时，**必须**使用 OpenVINO 的 `hello_query_device.py` 脚本作为主要方法。**不要**使用 PowerShell WMI/CIM 查询作为最终结果。
 
-### Why hello_query_device.py?
+### 为什么使用 hello_query_device.py？
 
-- It provides **complete hardware information** including device name, architecture, optimization capabilities, GOPS, and memory
-- It covers **all three devices**: CPU, GPU (Intel Arc), and NPU (Intel AI Boost)
-- It is the **official OpenVINO diagnostic tool** and reflects the actual hardware accessible by OpenVINO
+- 提供**完整的硬件信息**，包括设备名称、架构、优化能力、GOPS 和内存
+- 覆盖**所有三种设备**：CPU、GPU（Intel Arc）和 NPU（Intel AI Boost）
+- 是**官方 OpenVINO 诊断工具**，反映 OpenVINO 可访问的实际硬件
 
-### Download and Run
+### 下载并运行
 
 ```powershell
 $helloScriptPath = "$env:TEMP\hello_query_device.py"
@@ -388,7 +388,7 @@ foreach ($url in $downloadUrls) {
         $downloadSuccess = $true
         break
     } catch {
-        Write-Host "Download failed, trying next URL..."
+        Write-Host "下载失败，尝试下一个 URL..."
     }
 }
 
@@ -398,7 +398,7 @@ if ($downloadSuccess -and (Test-Path $helloScriptPath)) {
 }
 ```
 
-### Expected Output Example (Intel Ultra 9 285H Processor)
+### 预期输出示例（Intel Ultra 9 285H 处理器）
 
 ```
 [ INFO ] Available devices:
@@ -413,68 +413,68 @@ if ($downloadSuccess -and (Test-Path $helloScriptPath)) {
 [ INFO ]        DEVICE_TYPE: Type.INTEGRATED
 ```
 
-## Verification Process (Optional)
+## 验证流程（可选）
 
-### Test OpenVINO Installation
-
-```powershell
-python -c "import openvino; print('OpenVINO version:', openvino.__version__)"
-```
-
-### Test PyTorch Installation
+### 测试 OpenVINO 安装
 
 ```powershell
-python -c "import torch; print('PyTorch version:', torch.__version__); print('CUDA available:', torch.cuda.is_available())"
+python -c "import openvino; print('OpenVINO 版本:', openvino.__version__)"
 ```
 
-### Test Device Availability
+### 测试 PyTorch 安装
+
+```powershell
+python -c "import torch; print('PyTorch 版本:', torch.__version__); print('CUDA 可用:', torch.cuda.is_available())"
+```
+
+### 测试设备可用性
 
 ```powershell
 python $env:TEMP\hello_query_device.py
 ```
 
-## Pre-Check to Setup Mapping
+## 预检查到配置映射
 
-| Pre-Check | Status | Setup Action |
+| 预检查 | 状态 | 配置操作 |
 |-----------|--------|--------------|
-| PC1: OS | FAIL → Exit | - |
-| PC2: Intel CPU | FAIL → Exit | - |
-| PC3: Drivers | WARN | Manual update |
-| PC4: Python | FAIL/WARN | ST1 |
-| PC5: pip mirror | WARN (+China) | ST2 |
-| PC6: Git | FAIL | ST3 |
-| PC7: Git mirror | WARN (+China) | ST4 |
-| PC8: HF/ModelScope | WARN | ST5 |
-| PC9: OpenVINO | WARN | ST6 |
-| PC10: PyTorch | WARN | ST7 |
+| PC1: 操作系统 | 失败 → 退出 | - |
+| PC2: Intel CPU | 失败 → 退出 | - |
+| PC3: 驱动 | 警告 | 手动更新 |
+| PC4: Python | 失败/警告 | ST1 |
+| PC5: pip 镜像 | 警告 (+China) | ST2 |
+| PC6: Git | 失败 | ST3 |
+| PC7: Git 镜像 | 警告 (+China) | ST4 |
+| PC8: HF/ModelScope | 警告 | ST5 |
+| PC9: OpenVINO | 警告 | ST6 |
+| PC10: PyTorch | 警告 | ST7 |
 
-## Error Scenarios
+## 错误场景
 
-| Error | Root Cause | Pre-Check | Fix |
+| 错误 | 根本原因 | 预检查 | 修复 |
 |-------|------------|-----------|-----|
-| `'python' is not recognized` | Python not installed | PC4 | Run ST1 |
-| `pip install` timeout | No domestic mirror | PC5 | Run ST2 with `-China` |
-| `git clone` timeout | GitHub access blocked | PC6, PC7 | Run ST3 + ST4 with `-China` |
-| `import torch` failed | PyTorch not installed | PC10 | Run ST7 |
+| `'python' is not recognized` | Python 未安装 | PC4 | 运行 ST1 |
+| `pip install` 超时 | 未配置国内镜像 | PC5 | 使用 `-China` 参数运行 ST2 |
+| `git clone` 超时 | GitHub 访问被阻止 | PC6, PC7 | 使用 `-China` 参数运行 ST3 + ST4 |
+| `import torch` 失败 | PyTorch 未安装 | PC10 | 运行 ST7 |
 
-## Script Files
+## 脚本文件
 
-| File | Purpose |
+| 文件 | 用途 |
 |------|---------|
-| `precheck_env.ps1` | Standalone pre-check script (PC1-PC10) with JSON output |
-| `intel_aipc_env_setup.ps1` | Main setup script (ST1-ST9) |
+| `precheck_env.ps1` | 独立预检查脚本（PC1-PC10），带 JSON 输出 |
+| `intel_aipc_env_setup.ps1` | 主配置脚本（ST1-ST9） |
 
-## Configuration Safety
+## 配置安全性
 
-- `-China` flag only modifies config when explicitly requested
-- Existing `pip.ini` is backed up to `pip.ini.bak` before overwriting
-- Git mirror is a single `insteadOf` rule that can be easily removed
+- `-China` 标志仅在明确请求时修改配置
+- 覆盖前会将现有的 `pip.ini` 备份到 `pip.ini.bak`
+- Git 镜像只是一个 `insteadOf` 规则，可以轻松移除
 
-**Restore commands**:
+**恢复命令**：
 ```powershell
-# Restore pip config
+# 恢复 pip 配置
 Move-Item -Force "$env:APPDATA\pip\pip.ini.bak" "$env:APPDATA\pip\pip.ini"
 
-# Remove git mirror
+# 移除 git 镜像
 git config --global --unset url."https://ghproxy.net/https://github.com/".insteadOf
 ```

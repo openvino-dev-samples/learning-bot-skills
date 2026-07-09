@@ -1,13 +1,13 @@
 {
-  "display_name": "OpenVINO Environment Management",
-  "display_description": "Configure the Intel AIPC development environment on Windows: Python, Git, ModelScope, latest-stable OpenVINO, PyTorch CPU. Domestic mirrors are opt-in via -China.",
-  "detail_describe": "Sets up an Intel AIPC (Windows) development environment: installs Python, Git, ModelScope, the latest stable OpenVINO, and PyTorch CPU. Pass -China to apply domestic mirrors (Tsinghua pip + ghproxy git, with the existing pip.ini backed up); without it, existing pip/git config is left untouched. CMake and Visual Studio are optional components. Runs locally; no admin rights required for the base install.",
+  "display_name": "OpenVINO 环境管理",
+  "display_description": "在 Windows 上配置 Intel AIPC 开发环境：Python、Git、ModelScope、最新稳定版 OpenVINO、PyTorch CPU。通过 -China 参数启用国内镜像。",
+  "detail_describe": "在 Windows 上配置 Intel AIPC 开发环境：安装 Python、Git、ModelScope、最新稳定版 OpenVINO 和 PyTorch CPU。传入 -China 参数可应用国内镜像（清华 pip 镜像 + ghproxy git 镜像，现有 pip.ini 会被备份）；不传入则保留现有 pip/git 配置不变。CMake 和 Visual Studio 为可选组件。本地运行；基础安装无需管理员权限。",
   "name": "openvino-environment-management",
   "icon": "",
   "use_cases": [
-    "Configure the Intel AIPC dev environment on Windows",
-    "Install Python, Git, ModelScope, OpenVINO, and PyTorch CPU",
-    "Optionally install CMake / Visual Studio for C++ builds"
+    "在 Windows 上配置 Intel AIPC 开发环境",
+    "安装 Python、Git、ModelScope、OpenVINO 和 PyTorch CPU",
+    "可选安装 CMake / Visual Studio 用于 C++ 构建"
   ],
   "author": "Max/Ethan",
   "version": "1.1.0"

@@ -1,9 +1,9 @@
 <#
 .SYNOPSIS
-    Environment Pre-Check Script for Intel AIPC Development Environment
+    Intel AIPC 开发环境预检查脚本
 .DESCRIPTION
-    This script performs comprehensive pre-checks for Intel AIPC development environment on Windows.
-    Run this before any setup to assess current environment state.
+    此脚本在 Windows 上对 Intel AIPC 开发环境执行全面的预检查。
+    在任何配置之前运行此脚本以评估当前环境状态。
 #>
 
 function Write-Success {
@@ -24,53 +24,53 @@ function Write-Fail {
 $results = @{}
 
 Write-Host ("`n" + ("=" * 70))
-Write-Host "Intel AIPC Environment Pre-Check"
+Write-Host "Intel AIPC 环境预检查"
 Write-Host ("=" * 70)
 
-# PreCheck PC1: Check Windows Operating System
-Write-Host "`n[PC1] Checking Windows Operating System..."
+# 预检查 PC1: 检查 Windows 操作系统
+Write-Host "`n[PC1] 正在检查 Windows 操作系统..."
 $osInfo = Get-WmiObject -Class Win32_OperatingSystem
-Write-Host "  OS Name: $($osInfo.Caption)"
-Write-Host "  OS Version: $($osInfo.Version)"
+Write-Host "  操作系统名称: $($osInfo.Caption)"
+Write-Host "  操作系统版本: $($osInfo.Version)"
 
 if (-not ($osInfo.Caption -like "*Windows*")) {
-    Write-Fail "  FAIL: This script can only run on Windows!"
-    $results["PC1"] = @{ status = "FAIL"; message = "Non-Windows OS detected" }
+    Write-Fail "  失败: 此脚本只能在 Windows 上运行！"
+    $results["PC1"] = @{ status = "FAIL"; message = "检测到非 Windows 操作系统" }
 } else {
-    Write-Success "  PASS: Windows OS detected"
-    $results["PC1"] = @{ status = "PASS"; message = "Windows OS detected" }
+    Write-Success "  通过: 检测到 Windows 操作系统"
+    $results["PC1"] = @{ status = "PASS"; message = "检测到 Windows 操作系统" }
 }
 
-# PreCheck PC2: Check Intel Processor
-Write-Host "`n[PC2] Checking Intel Processor..."
+# 预检查 PC2: 检查 Intel 处理器
+Write-Host "`n[PC2] 正在检查 Intel 处理器..."
 $cpuInfo = Get-WmiObject -Class Win32_Processor
 $cpuName = $cpuInfo.Name
-Write-Host "  Processor: $cpuName"
+Write-Host "  处理器: $cpuName"
 
 $isIntel = $cpuName -like "*Intel*"
 $isUltra = $cpuName -like "*Ultra*"
 $hasArc = $cpuName -like "*Arc*"
 
 if (-not $isIntel) {
-    Write-Fail "  FAIL: Non-Intel processor detected! This script only supports Intel processors."
-    $results["PC2"] = @{ status = "FAIL"; message = "Non-Intel processor" }
+    Write-Fail "  失败: 检测到非 Intel 处理器！此脚本仅支持 Intel 处理器。"
+    $results["PC2"] = @{ status = "FAIL"; message = "非 Intel 处理器" }
 } else {
-    Write-Success "  PASS: Intel processor detected"
-    $results["PC2"] = @{ status = "PASS"; message = "Intel processor detected" }
+    Write-Success "  通过: 检测到 Intel 处理器"
+    $results["PC2"] = @{ status = "PASS"; message = "检测到 Intel 处理器" }
     
     if (-not ($isUltra -or $hasArc)) {
-        Write-Warn "  WARN: Non-Ultra series processor. iGPU/NPU acceleration may be limited."
-        $results["PC2"].warning = "Non-Ultra processor"
+        Write-Warn "  警告: 非 Ultra 系列处理器。iGPU/NPU 加速可能受限。"
+        $results["PC2"].warning = "非 Ultra 处理器"
     }
 }
 
-# PreCheck PC3: Check iGPU/NPU and Drivers
-Write-Host "`n[PC3] Checking Graphics Drivers..."
+# 预检查 PC3: 检查 iGPU/NPU 和驱动
+Write-Host "`n[PC3] 正在检查图形驱动..."
 
-Write-Host "  GPU Devices:"
+Write-Host "  GPU 设备:"
 Get-WmiObject -Class Win32_VideoController | ForEach-Object {
-    Write-Host "    Name: $($_.Name)"
-    Write-Host "    Driver Version: $($_.DriverVersion)"
+    Write-Host "    名称: $($_.Name)"
+    Write-Host "    驱动版本: $($_.DriverVersion)"
 }
 
 $intelDriver = Get-WmiObject -Class Win32_PnPSignedDriver | Where-Object {
@@ -78,19 +78,19 @@ $intelDriver = Get-WmiObject -Class Win32_PnPSignedDriver | Where-Object {
 }
 
 if ($intelDriver) {
-    Write-Success "  PASS: Intel graphics driver found"
-    $results["PC3"] = @{ status = "PASS"; message = "Intel graphics driver found" }
+    Write-Success "  通过: 找到 Intel 图形驱动"
+    $results["PC3"] = @{ status = "PASS"; message = "找到 Intel 图形驱动" }
     $intelDriver | ForEach-Object {
-        Write-Host "    Device: $($_.DeviceName)"
-        Write-Host "    Driver Version: $($_.DriverVersion)"
+        Write-Host "    设备: $($_.DeviceName)"
+        Write-Host "    驱动版本: $($_.DriverVersion)"
     }
 } else {
-    Write-Warn "  WARN: No Intel graphics driver found"
-    $results["PC3"] = @{ status = "WARN"; message = "No Intel graphics driver found" }
+    Write-Warn "  警告: 未找到 Intel 图形驱动"
+    $results["PC3"] = @{ status = "WARN"; message = "未找到 Intel 图形驱动" }
 }
 
-# PreCheck PC4: Check Python Installation
-Write-Host "`n[PC4] Checking Python Installation..."
+# 预检查 PC4: 检查 Python 安装
+Write-Host "`n[PC4] 正在检查 Python 安装..."
 
 $pythonFound = $false
 $pythonVersion = $null
@@ -109,12 +109,12 @@ $pythonExePaths = @(
 
 if ($pythonExePaths) {
     $pythonFound = $true
-    Write-Host "  Found: $pythonExePaths"
+    Write-Host "  找到: $pythonExePaths"
     
     try {
         $versionOutput = & $pythonExePaths --version 2>&1
         $pythonVersion = $versionOutput -replace "Python ", ""
-        Write-Host "  Version: $pythonVersion"
+        Write-Host "  版本: $pythonVersion"
         
         $versionMatch = $pythonVersion -match "^(\d+)\.(\d+)"
         if ($versionMatch) {
@@ -122,32 +122,32 @@ if ($pythonExePaths) {
             $minor = [int]$matches[2]
             
             if ($major -eq 3 -and $minor -ge 10) {
-                Write-Success "  PASS: Python 3.10+ installed"
-                $results["PC4"] = @{ status = "PASS"; message = "Python $pythonVersion installed" }
+                Write-Success "  通过: Python 3.10+ 已安装"
+                $results["PC4"] = @{ status = "PASS"; message = "Python $pythonVersion 已安装" }
             } else {
-                Write-Warn "  WARN: Python version $pythonVersion below 3.10"
-                $results["PC4"] = @{ status = "WARN"; message = "Python version below 3.10" }
+                Write-Warn "  警告: Python 版本 $pythonVersion 低于 3.10"
+                $results["PC4"] = @{ status = "WARN"; message = "Python 版本低于 3.10" }
             }
         }
     } catch {
-        Write-Warn "  WARN: Unable to get Python version"
-        $results["PC4"] = @{ status = "WARN"; message = "Unable to get Python version" }
+        Write-Warn "  警告: 无法获取 Python 版本"
+        $results["PC4"] = @{ status = "WARN"; message = "无法获取 Python 版本" }
     }
     
     try {
         & $pythonExePaths -m pip --version 2>&1 | Out-Null
         $pipFound = $true
-        Write-Success "  PASS: pip is installed"
+        Write-Success "  通过: pip 已安装"
     } catch {
-        Write-Warn "  WARN: pip not installed or not accessible"
+        Write-Warn "  警告: pip 未安装或无法访问"
     }
 } else {
-    Write-Fail "  FAIL: Python is not installed"
-    $results["PC4"] = @{ status = "FAIL"; message = "Python not installed" }
+    Write-Fail "  失败: Python 未安装"
+    $results["PC4"] = @{ status = "FAIL"; message = "Python 未安装" }
 }
 
-# PreCheck PC5: Check pip Mirror Configuration
-Write-Host "`n[PC5] Checking pip Mirror Configuration..."
+# 预检查 PC5: 检查 pip 镜像配置
+Write-Host "`n[PC5] 正在检查 pip 镜像配置..."
 
 $pipConfigPath = "$env:APPDATA\pip\pip.ini"
 $pipMirrorConfigured = $false
@@ -156,19 +156,19 @@ if (Test-Path $pipConfigPath) {
     $pipConfigContent = Get-Content $pipConfigPath -Raw
     if ($pipConfigContent -match "index-url\s*=\s*https://pypi\.tuna\.tsinghua\.edu\.cn/simple") {
         $pipMirrorConfigured = $true
-        Write-Success "  PASS: pip mirror configured to Tsinghua University mirror"
-        $results["PC5"] = @{ status = "PASS"; message = "Tsinghua mirror configured" }
+        Write-Success "  通过: pip 镜像已配置为清华大学镜像"
+        $results["PC5"] = @{ status = "PASS"; message = "已配置清华镜像" }
     } else {
-        Write-Warn "  WARN: pip.ini exists but mirror not configured"
-        $results["PC5"] = @{ status = "WARN"; message = "pip.ini exists but mirror not configured" }
+        Write-Warn "  警告: pip.ini 存在但未配置镜像"
+        $results["PC5"] = @{ status = "WARN"; message = "pip.ini 存在但未配置镜像" }
     }
 } else {
-    Write-Warn "  WARN: pip.ini not found, no mirror configured"
-    $results["PC5"] = @{ status = "WARN"; message = "pip.ini not found" }
+    Write-Warn "  警告: pip.ini 未找到，未配置镜像"
+    $results["PC5"] = @{ status = "WARN"; message = "pip.ini 未找到" }
 }
 
-# PreCheck PC6: Check Git Installation
-Write-Host "`n[PC6] Checking Git Installation..."
+# 预检查 PC6: 检查 Git 安装
+Write-Host "`n[PC6] 正在检查 Git 安装..."
 
 $gitFound = $false
 
@@ -176,29 +176,29 @@ try {
     $gitVersion = git --version 2>&1
     if ($gitVersion -match "git version") {
         $gitFound = $true
-        Write-Success "  PASS: Git is installed: $gitVersion"
-        $results["PC6"] = @{ status = "PASS"; message = "Git installed" }
+        Write-Success "  通过: Git 已安装: $gitVersion"
+        $results["PC6"] = @{ status = "PASS"; message = "Git 已安装" }
     }
 } catch {
-    Write-Fail "  FAIL: Git is not installed or not in PATH"
-    $results["PC6"] = @{ status = "FAIL"; message = "Git not installed" }
+    Write-Fail "  失败: Git 未安装或不在 PATH 中"
+    $results["PC6"] = @{ status = "FAIL"; message = "Git 未安装" }
 }
 
 if ($gitFound) {
     try {
         $gitLfsVersion = git lfs version 2>&1
         if ($gitLfsVersion -match "git-lfs") {
-            Write-Success "  PASS: Git-LFS is installed"
+            Write-Success "  通过: Git-LFS 已安装"
         } else {
-            Write-Warn "  WARN: Git-LFS is not installed"
+            Write-Warn "  警告: Git-LFS 未安装"
         }
     } catch {
-        Write-Warn "  WARN: Git-LFS is not installed"
+        Write-Warn "  警告: Git-LFS 未安装"
     }
 }
 
-# PreCheck PC7: Check Git Mirror Configuration
-Write-Host "`n[PC7] Checking Git Mirror Configuration..."
+# 预检查 PC7: 检查 Git 镜像配置
+Write-Host "`n[PC7] 正在检查 Git 镜像配置..."
 
 $gitMirrorConfigured = $false
 
@@ -206,113 +206,113 @@ try {
     $ghProxyConfig = git config --global --get url."https://ghproxy.net/https://github.com/".insteadOf 2>&1
     if ($ghProxyConfig -eq "https://github.com/") {
         $gitMirrorConfigured = $true
-        Write-Success "  PASS: Git mirror configured to ghproxy.net"
-        $results["PC7"] = @{ status = "PASS"; message = "ghproxy mirror configured" }
+        Write-Success "  通过: Git 镜像已配置为 ghproxy.net"
+        $results["PC7"] = @{ status = "PASS"; message = "ghproxy 镜像已配置" }
     } else {
-        Write-Warn "  WARN: Git mirror not configured for github.com"
-        $results["PC7"] = @{ status = "WARN"; message = "Git mirror not configured" }
+        Write-Warn "  警告: Git 镜像未配置用于 github.com"
+        $results["PC7"] = @{ status = "WARN"; message = "Git 镜像未配置" }
     }
 } catch {
-    Write-Warn "  WARN: Unable to check git mirror configuration"
-    $results["PC7"] = @{ status = "WARN"; message = "Unable to check git mirror" }
+    Write-Warn "  警告: 无法检查 git 镜像配置"
+    $results["PC7"] = @{ status = "WARN"; message = "无法检查 git 镜像" }
 }
 
-# PreCheck PC8: Check HF_ENDPOINT and ModelScope API Configuration
-Write-Host "`n[PC8] Checking Hugging Face and ModelScope Configuration..."
+# 预检查 PC8: 检查 HF_ENDPOINT 和 ModelScope API 配置
+Write-Host "`n[PC8] 正在检查 Hugging Face 和 ModelScope 配置..."
 
 $hfEndpoint = [Environment]::GetEnvironmentVariable("HF_ENDPOINT", "User")
 if ($hfEndpoint) {
     Write-Host "  HF_ENDPOINT: $hfEndpoint"
     if ($hfEndpoint -eq "https://hf-mirror.com") {
-        Write-Success "  PASS: HF_ENDPOINT set to hf-mirror.com"
+        Write-Success "  通过: HF_ENDPOINT 已设置为 hf-mirror.com"
     } else {
-        Write-Warn "  WARN: HF_ENDPOINT set to non-standard value"
+        Write-Warn "  警告: HF_ENDPOINT 设置为非标准值"
     }
 } else {
-    Write-Warn "  WARN: HF_ENDPOINT is not set"
-    $results["PC8"] = @{ status = "WARN"; message = "HF_ENDPOINT not set" }
+    Write-Warn "  警告: HF_ENDPOINT 未设置"
+    $results["PC8"] = @{ status = "WARN"; message = "HF_ENDPOINT 未设置" }
 }
 
 $modelscopeApi = [Environment]::GetEnvironmentVariable("MODELSCOPE_API_URL", "User")
 if ($modelscopeApi) {
     Write-Host "  MODELSCOPE_API_URL: $modelscopeApi"
     if ($modelscopeApi -eq "https://api.modelscope.cn") {
-        Write-Success "  PASS: MODELSCOPE_API_URL set to api.modelscope.cn"
-        $results["PC8"] = @{ status = "PASS"; message = "HF/ModelScope configured" }
+        Write-Success "  通过: MODELSCOPE_API_URL 已设置为 api.modelscope.cn"
+        $results["PC8"] = @{ status = "PASS"; message = "HF/ModelScope 已配置" }
     }
 } else {
-    Write-Warn "  WARN: MODELSCOPE_API_URL is not set"
-    $results["PC8"] = @{ status = "WARN"; message = "MODELSCOPE_API_URL not set" }
+    Write-Warn "  警告: MODELSCOPE_API_URL 未设置"
+    $results["PC8"] = @{ status = "WARN"; message = "MODELSCOPE_API_URL 未设置" }
 }
 
-# PreCheck PC9: Check OpenVINO Installation
-Write-Host "`n[PC9] Checking OpenVINO Installation..."
+# 预检查 PC9: 检查 OpenVINO 安装
+Write-Host "`n[PC9] 正在检查 OpenVINO 安装..."
 
 try {
     $ovVersion = python -c "import openvino; print(openvino.__version__)" 2>&1
     if (-not ($ovVersion -match "ImportError")) {
-        Write-Success "  PASS: OpenVINO installed: $ovVersion"
-        $results["PC9"] = @{ status = "PASS"; message = "OpenVINO $ovVersion installed" }
+        Write-Success "  通过: OpenVINO 已安装: $ovVersion"
+        $results["PC9"] = @{ status = "PASS"; message = "OpenVINO $ovVersion 已安装" }
     } else {
-        Write-Warn "  WARN: OpenVINO not installed"
-        $results["PC9"] = @{ status = "WARN"; message = "OpenVINO not installed" }
+        Write-Warn "  警告: OpenVINO 未安装"
+        $results["PC9"] = @{ status = "WARN"; message = "OpenVINO 未安装" }
     }
 } catch {
-    Write-Warn "  WARN: Unable to check OpenVINO installation"
-    $results["PC9"] = @{ status = "WARN"; message = "Unable to check OpenVINO" }
+    Write-Warn "  警告: 无法检查 OpenVINO 安装"
+    $results["PC9"] = @{ status = "WARN"; message = "无法检查 OpenVINO" }
 }
 
-# PreCheck PC10: Check PyTorch Installation
-Write-Host "`n[PC10] Checking PyTorch Installation..."
+# 预检查 PC10: 检查 PyTorch 安装
+Write-Host "`n[PC10] 正在检查 PyTorch 安装..."
 
 try {
     $torchVersion = python -c "import torch; print(torch.__version__)" 2>&1
     if (-not ($torchVersion -match "ImportError")) {
-        Write-Success "  PASS: PyTorch installed: $torchVersion"
-        $results["PC10"] = @{ status = "PASS"; message = "PyTorch $torchVersion installed" }
+        Write-Success "  通过: PyTorch 已安装: $torchVersion"
+        $results["PC10"] = @{ status = "PASS"; message = "PyTorch $torchVersion 已安装" }
         
         try {
             $cudaAvailable = python -c "import torch; print(torch.cuda.is_available())" 2>&1
-            Write-Host "  CUDA available: $cudaAvailable"
+            Write-Host "  CUDA 可用: $cudaAvailable"
         } catch {
-            Write-Host "  Unable to check CUDA status"
+            Write-Host "  无法检查 CUDA 状态"
         }
     } else {
-        Write-Warn "  WARN: PyTorch not installed"
-        $results["PC10"] = @{ status = "WARN"; message = "PyTorch not installed" }
+        Write-Warn "  警告: PyTorch 未安装"
+        $results["PC10"] = @{ status = "WARN"; message = "PyTorch 未安装" }
     }
 } catch {
-    Write-Warn "  WARN: Unable to check PyTorch installation"
-    $results["PC10"] = @{ status = "WARN"; message = "Unable to check PyTorch" }
+    Write-Warn "  警告: 无法检查 PyTorch 安装"
+    $results["PC10"] = @{ status = "WARN"; message = "无法检查 PyTorch" }
 }
 
-# Summary
+# 摘要
 Write-Host ("`n" + ("=" * 70))
-Write-Host "Pre-Check Summary"
+Write-Host "预检查摘要"
 Write-Host ("=" * 70)
 
 $failCount = ($results.Values | Where-Object { $_.status -eq "FAIL" }).Count
 $warnCount = ($results.Values | Where-Object { $_.status -eq "WARN" }).Count
 $passCount = ($results.Values | Where-Object { $_.status -eq "PASS" }).Count
 
-Write-Host "`nResults:"
-Write-Host "  PASS: $passCount" -ForegroundColor Green
-Write-Host "  WARN: $warnCount" -ForegroundColor Yellow
-Write-Host "  FAIL: $failCount" -ForegroundColor Red
+Write-Host "`n结果:"
+Write-Host "  通过: $passCount" -ForegroundColor Green
+Write-Host "  警告: $warnCount" -ForegroundColor Yellow
+Write-Host "  失败: $failCount" -ForegroundColor Red
 
-Write-Host "`nAction Required:"
+Write-Host "`n需要执行的操作:"
 foreach ($key in $results.Keys) {
     $result = $results[$key]
     if ($result.status -eq "FAIL") {
-        Write-Fail "  $key: $($result.message) → Run corresponding setup step"
+        Write-Fail "  $key: $($result.message) → 运行相应的配置步骤"
     } elseif ($result.status -eq "WARN") {
-        Write-Warn "  $key: $($result.message) → Consider running setup"
+        Write-Warn "  $key: $($result.message) → 考虑运行配置"
     }
 }
 
 Write-Host ("`n" + ("=" * 70))
 
-# JSON Output for Agent Consumption
+# 供智能体使用的 JSON 输出
 Write-Host "`n[AGENT_OUTPUT]"
 $summary = @{
     total = $results.Count
@@ -331,14 +331,14 @@ foreach ($key in $results.Keys) {
             status = $result.status
             message = $result.message
             recommended_action = switch($key) {
-                "PC4" { "Run ST1: Install Python" }
-                "PC5" { "Run ST2: Configure pip mirror (with -China)" }
-                "PC6" { "Run ST3: Install Git" }
-                "PC7" { "Run ST4: Configure Git mirror (with -China)" }
-                "PC8" { "Run ST5: Install ModelScope and configure mirrors" }
-                "PC9" { "Run ST6: Install OpenVINO" }
-                "PC10" { "Run ST7: Install PyTorch" }
-                default { "Manual action required" }
+                "PC4" { "运行 ST1: 安装 Python" }
+                "PC5" { "运行 ST2: 配置 pip 镜像 (使用 -China)" }
+                "PC6" { "运行 ST3: 安装 Git" }
+                "PC7" { "运行 ST4: 配置 Git 镜像 (使用 -China)" }
+                "PC8" { "运行 ST5: 安装 ModelScope 并配置镜像" }
+                "PC9" { "运行 ST6: 安装 OpenVINO" }
+                "PC10" { "运行 ST7: 安装 PyTorch" }
+                default { "需要手动操作" }
             }
         }
     }
