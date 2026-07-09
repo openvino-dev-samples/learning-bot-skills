@@ -1,7 +1,7 @@
 {
   "display_name": "OpenVINO Environment Management",
-  "display_description": "Configure the Intel AIPC development environment on Windows: Python, Git, ModelScope, latest-stable OpenVINO, PyTorch CPU, with domestic mirrors.",
-  "detail_describe": "Sets up an Intel AIPC (Windows) development environment: installs Python, Git, ModelScope, the latest stable OpenVINO, and PyTorch CPU, and configures domestic mirrors. CMake and Visual Studio are optional components. Runs locally; no admin rights required for the base install.",
+  "display_description": "Configure the Intel AIPC development environment on Windows: Python, Git, ModelScope, latest-stable OpenVINO, PyTorch CPU. Domestic mirrors are opt-in via -China.",
+  "detail_describe": "Sets up an Intel AIPC (Windows) development environment: installs Python, Git, ModelScope, the latest stable OpenVINO, and PyTorch CPU. Pass -China to apply domestic mirrors (Tsinghua pip + ghproxy git, with the existing pip.ini backed up); without it, existing pip/git config is left untouched. CMake and Visual Studio are optional components. Runs locally; no admin rights required for the base install.",
   "name": "openvino-environment-management",
   "icon": "",
   "use_cases": [
@@ -10,5 +10,5 @@
     "Optionally install CMake / Visual Studio for C++ builds"
   ],
   "author": "Max/Ethan",
-  "version": "1.0.0"
+  "version": "1.1.0"
 }

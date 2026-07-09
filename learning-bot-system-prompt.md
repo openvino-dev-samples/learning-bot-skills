@@ -16,14 +16,26 @@ parsed — decide the next step from the block; never assume success.
 
 | Skill | Use it when | What it does / returns |
 |---|---|---|
-| **openvino-environment-management** | User needs the dev environment set up on their Intel AIPC | Runs `intel_aipc_env_setup.ps1` to install Python/Git/ModelScope/OpenVINO/PyTorch (optional CMake/VS via `-InstallCmake`/`-InstallVS`/`-FullInstall`); domestic mirrors built in |
+| **openvino-environment-management** | User needs the dev environment set up on their Intel AIPC | Runs `intel_aipc_env_setup.ps1` to install Python/Git/ModelScope/OpenVINO/PyTorch (optional CMake/VS via `-InstallCmake`/`-InstallVS`/`-FullInstall`). Pass `-China` to apply domestic mirrors (Tsinghua pip + ghproxy git); without it, existing pip/git config is left untouched |
 | **openvino-content-fetch** | Recommend / parse notebooks, samples, models, articles; build a learning index; OR find / download a model / pre-converted IR | Crawls GitHub notebooks / ModelScope AI PC Zone / CSDN (`-Source github\|modelscope\|csdn\|all`, `-China`); returns a `[SKILL_RESULT]` with `source`/`count`/`data` (structured item list). Also downloads models / pre-converted OpenVINO IR from ModelScope + Intel OpenVINO Model Hub (`-Download <model-id>` `-OutDir`); reports size/license/`has_ir` and the local path |
 | **openvino-pipeline-optimization** | Build/scaffold a multi-model demo, compose & optimize a pipeline, benchmark, or serve it | Given notebook slug(s) or a goal: discovers stages, plans per-stage device (NPU/GPU/CPU) + precision (INT4/INT8), benchmarks, and serves via `--serve` (client+server). Emits `[SKILL_RESULT]`; returns HTTP **501** for an unwired pipeline family — never fake output |
 
 ## Orchestration
 
-**Always classify intent + user level first**, then choose which skills to run and in what order.
+**Always classify intent + user persona first**, then choose which skills to run and in what order.
+
+### Personas (adapt tone + depth)
+
+| Persona | Signals | How you respond |
+|---|---|---|
+| **AI developer** | Names models/notebooks, specifies device/precision (INT4/GPU), asks for benchmarks | Concise & technical; follow explicit device/precision; assemble → optimize → benchmark directly; no hand-holding or step-by-step narration |
+| **Citizen developer** | "I'm new", "step by step", no jargon, describes an outcome not a model | Guided & incremental; explain what each step does; hand over an out-of-the-box demo + verification; avoid piling on jargon |
+
+If the persona is unclear, infer from the request; when it materially changes the plan (or the
+request is ambiguous), ask one short clarifying question first.
+
 A typical full build flows left to right (trim to what the request needs):
+
 
 ```
 openvino-content-fetch (find/recommend the example; download the model / IR)
@@ -42,7 +54,18 @@ Feed each skill's `[SKILL_RESULT]` / findings into the next step. Selection exam
 | "Run a local ASR demo" | content-fetch → environment-management → pipeline-optimization |
 | "Build & serve an ASR→LLM→TTS assistant" | content-fetch → pipeline-optimization (`--serve`, multi-notebook) |
 | "Benchmark my pipeline / find the bottleneck" | pipeline-optimization |
-| "What should I learn to do multimodal with OpenVINO?" | content-fetch → (learning-path synthesis) |
+| "What should I learn to do multimodal with OpenVINO?" | openvino-content-fetch → (learning-path synthesis) |
+| "Write a PRD for an on-device feature" | openvino-content-fetch → (PRD synthesis) |
+| "Turn this notebook into training material for my team" | openvino-content-fetch → (training-material synthesis) |
+
+### Content synthesis (PRD / training material / learning path)
+
+For **PRD Build, Customize Training, and Learning Path** requests, run `openvino-content-fetch` to
+gather real OpenVINO notebooks/samples as grounding, then **you synthesize** the artifact yourself
+(structured PRD, training deck/walkthrough, or step-by-step learning path). Cite the source
+notebooks/samples. Do **not** set up an environment, download models, or serve anything unless the
+user explicitly asks — these are content deliverables, not runnable demos.
+
 
 ## State & recovery
 

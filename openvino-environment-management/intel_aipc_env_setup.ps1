@@ -4,7 +4,8 @@ param(
     [switch]$InstallCmake = $false,
     [switch]$InstallVS = $false,
     [switch]$FullInstall = $false,
-    [switch]$WithGitLfs = $false
+    [switch]$WithGitLfs = $false,
+    [switch]$China = $false
 )
 
 function Write-Header {
@@ -304,20 +305,31 @@ if (-not $pythonInstalled) {
 Write-Host ""
 Write-Host "[5/16] Configuring pip domestic mirror..." -ForegroundColor White
 
-$pipConfigDir = "$env:APPDATA\pip"
-if (-not (Test-Path $pipConfigDir)) {
-    New-Item -ItemType Directory -Path $pipConfigDir -Force | Out-Null
-}
+if ($China) {
+    $pipConfigDir = "$env:APPDATA\pip"
+    if (-not (Test-Path $pipConfigDir)) {
+        New-Item -ItemType Directory -Path $pipConfigDir -Force | Out-Null
+    }
 
-$pipConfig = @"
+    # Back up any existing pip.ini so we can restore the device's original config
+    $pipIni = "$pipConfigDir\pip.ini"
+    if ((Test-Path $pipIni) -and (-not (Test-Path "$pipIni.bak"))) {
+        Copy-Item $pipIni "$pipIni.bak" -Force
+        Write-Warn "Existing pip.ini backed up to pip.ini.bak (restore with: Move-Item -Force '$pipIni.bak' '$pipIni')"
+    }
+
+    $pipConfig = @"
 [global]
 index-url = https://pypi.tuna.tsinghua.edu.cn/simple
 [install]
 trusted-host = pypi.tuna.tsinghua.edu.cn
 "@
 
-Set-Content -Path "$pipConfigDir\pip.ini" -Value $pipConfig -Encoding UTF8
-Write-Success "pip mirror configured to Tsinghua University mirror (https://pypi.tuna.tsinghua.edu.cn/simple)"
+    Set-Content -Path $pipIni -Value $pipConfig -Encoding UTF8
+    Write-Success "pip mirror configured to Tsinghua University mirror (https://pypi.tuna.tsinghua.edu.cn/simple)"
+} else {
+    Write-Host "  Skipped (use -China to configure a domestic pip mirror; existing pip config left untouched)" -ForegroundColor Yellow
+}
 
 Write-Host ""
 Write-Host "[6/16] Installing Git..." -ForegroundColor White
@@ -425,13 +437,18 @@ if ($WithGitLfs) {
 Write-Host ""
 Write-Host "[8/16] Configuring Git domestic mirror..." -ForegroundColor White
 
-git config --global url."https://ghproxy.net/https://github.com/".insteadOf "https://github.com/"
+if ($China) {
+    git config --global url."https://ghproxy.net/https://github.com/".insteadOf "https://github.com/"
 
-$ghProxyConfig = git config --global --get url."https://ghproxy.net/https://github.com/".insteadOf
-if ($ghProxyConfig -eq "https://github.com/") {
-    Write-Success "Git mirror configured to ghproxy.net (github.com only)"
+    $ghProxyConfig = git config --global --get url."https://ghproxy.net/https://github.com/".insteadOf
+    if ($ghProxyConfig -eq "https://github.com/") {
+        Write-Success "Git mirror configured to ghproxy.net (github.com only)"
+        Write-Warn "Restore original git config with: git config --global --unset url.`"https://ghproxy.net/https://github.com/`".insteadOf"
+    } else {
+        Write-Warn "Git mirror configuration may have failed"
+    }
 } else {
-    Write-Warn "Git mirror configuration may have failed"
+    Write-Host "  Skipped (use -China to route github.com through ghproxy.net; global git config left untouched)" -ForegroundColor Yellow
 }
 
 Write-Host "  Test verification: ghproxy mirror is approximately 33% faster than original URL" -ForegroundColor Green

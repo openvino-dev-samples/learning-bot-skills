@@ -1,6 +1,6 @@
 ---
 name: "openvino-environment-management"
-description: "Configure Intel AIPC development environment on Windows: install Python, Git, ModelScope, OpenVINO, PyTorch CPU, and set up domestic mirrors. CMake and Visual Studio are optional components. Call this skill when you need to configure Intel AIPC development environment on Windows."
+description: "Configure Intel AIPC development environment on Windows: install Python, Git, ModelScope, OpenVINO, PyTorch CPU. Pass -China to apply domestic mirrors (pip/git); otherwise existing config is left untouched. CMake and Visual Studio are optional components. Call this skill when you need to configure Intel AIPC development environment on Windows."
 ---
 
 # Environment Management (Intel AIPC)
@@ -14,10 +14,14 @@ This skill configures Intel AIPC development environment on Windows, including b
 | `-InstallCmake` | Install CMake | `$false` |
 | `-InstallVS` | Install Visual Studio Community Edition | `$false` |
 | `-FullInstall` | Install all components (including optional) | `$false` |
+| `-China` | Use domestic mirrors (Tsinghua pip + ghproxy.net for github.com). When omitted, existing pip/git config is left untouched. | `$false` |
 
 ```powershell
-# Basic installation (default)
+# Basic installation (default) — no mirror changes, existing pip/git config preserved
 powershell -ExecutionPolicy Bypass -File intel_aipc_env_setup.ps1
+
+# Mainland China / no VPN — apply domestic mirrors
+powershell -ExecutionPolicy Bypass -File intel_aipc_env_setup.ps1 -China
 
 # Install CMake
 powershell -ExecutionPolicy Bypass -File intel_aipc_env_setup.ps1 -InstallCmake
@@ -28,6 +32,16 @@ powershell -ExecutionPolicy Bypass -File intel_aipc_env_setup.ps1 -InstallVS
 # Install everything (including optional)
 powershell -ExecutionPolicy Bypass -File intel_aipc_env_setup.ps1 -FullInstall
 ```
+
+> **Config safety / restore:** `-China` only rewrites mirror config when explicitly requested. Any
+> existing `pip.ini` is backed up to `pip.ini.bak` before being overwritten, and the git mirror is a
+> single `insteadOf` rule. To restore the machine's defaults:
+> ```powershell
+> # restore pip config
+> Move-Item -Force "$env:APPDATA\pip\pip.ini.bak" "$env:APPDATA\pip\pip.ini"
+> # remove the git github->ghproxy rewrite
+> git config --global --unset url."https://ghproxy.net/https://github.com/".insteadOf
+> ```
 
 ## Pre-checks
 
@@ -143,12 +157,20 @@ pip --version
 
 ### Step 5: Configure pip Domestic Mirror
 
+> Only applied with `-China`. Without it, the existing pip configuration is left untouched. When
+> applied, any existing `pip.ini` is first backed up to `pip.ini.bak`.
+
 ```powershell
 Write-Host "`n=== Configuring pip domestic mirror ==="
 
 $pipConfigDir = "$env:APPDATA\pip"
 if (-not (Test-Path $pipConfigDir)) {
     New-Item -ItemType Directory -Path $pipConfigDir -Force | Out-Null
+}
+
+$pipIni = "$pipConfigDir\pip.ini"
+if ((Test-Path $pipIni) -and (-not (Test-Path "$pipIni.bak"))) {
+    Copy-Item $pipIni "$pipIni.bak" -Force  # preserve original for restore
 }
 
 $pipConfig = @"
@@ -158,7 +180,7 @@ index-url = https://pypi.tuna.tsinghua.edu.cn/simple
 trusted-host = pypi.tuna.tsinghua.edu.cn
 "@
 
-Set-Content -Path "$pipConfigDir\pip.ini" -Value $pipConfig -Encoding UTF8
+Set-Content -Path $pipIni -Value $pipConfig -Encoding UTF8
 
 Write-Host "pip mirror configured to Tsinghua University mirror."
 ```
@@ -256,6 +278,9 @@ git --version
 
 ### Step 7: Configure Git Domestic Mirror
 
+> Only applied with `-China`. Without it, the global git config is left untouched. Restore later with
+> `git config --global --unset url."https://ghproxy.net/https://github.com/".insteadOf`.
+
 ```powershell
 Write-Host "`n=== Configuring Git domestic mirror ==="
 
@@ -276,7 +301,7 @@ if ($ghProxyConfig -eq "https://github.com/") {
 | GitHub Original | 4.97 seconds | ✓ Success |
 | ghproxy Mirror | 3.32 seconds | ✓ Success |
 
-**Conclusion**: ghproxy mirror is approximately 33% faster (1.65 seconds) than the original URL, with complete and consistent downloaded files. Therefore, ghproxy mirror is configured by default for better download experience.
+**Conclusion**: ghproxy mirror is approximately 33% faster (1.65 seconds) than the original URL, with complete and consistent downloaded files. ghproxy mirror is therefore used when `-China` is passed, for a better download experience in mainland China.
 
 **How it works**: After configuration, all `git clone https://github.com/xxx` commands will automatically be converted to `git clone https://ghproxy.net/https://github.com/xxx`, no manual URL modification required.
 
