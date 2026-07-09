@@ -3,9 +3,7 @@ Set-ExecutionPolicy Bypass -Scope Process -Force
 param(
     [switch]$InstallCmake = $false,
     [switch]$InstallVS = $false,
-    [switch]$FullInstall = $false,
-    [switch]$WithGitLfs = $false,
-    [switch]$China = $false
+    [switch]$FullInstall = $false
 )
 
 function Write-Header {
@@ -305,31 +303,20 @@ if (-not $pythonInstalled) {
 Write-Host ""
 Write-Host "[5/16] Configuring pip domestic mirror..." -ForegroundColor White
 
-if ($China) {
-    $pipConfigDir = "$env:APPDATA\pip"
-    if (-not (Test-Path $pipConfigDir)) {
-        New-Item -ItemType Directory -Path $pipConfigDir -Force | Out-Null
-    }
+$pipConfigDir = "$env:APPDATA\pip"
+if (-not (Test-Path $pipConfigDir)) {
+    New-Item -ItemType Directory -Path $pipConfigDir -Force | Out-Null
+}
 
-    # Back up any existing pip.ini so we can restore the device's original config
-    $pipIni = "$pipConfigDir\pip.ini"
-    if ((Test-Path $pipIni) -and (-not (Test-Path "$pipIni.bak"))) {
-        Copy-Item $pipIni "$pipIni.bak" -Force
-        Write-Warn "Existing pip.ini backed up to pip.ini.bak (restore with: Move-Item -Force '$pipIni.bak' '$pipIni')"
-    }
-
-    $pipConfig = @"
+$pipConfig = @"
 [global]
 index-url = https://pypi.tuna.tsinghua.edu.cn/simple
 [install]
 trusted-host = pypi.tuna.tsinghua.edu.cn
 "@
 
-    Set-Content -Path $pipIni -Value $pipConfig -Encoding UTF8
-    Write-Success "pip mirror configured to Tsinghua University mirror (https://pypi.tuna.tsinghua.edu.cn/simple)"
-} else {
-    Write-Host "  Skipped (use -China to configure a domestic pip mirror; existing pip config left untouched)" -ForegroundColor Yellow
-}
+Set-Content -Path "$pipConfigDir\pip.ini" -Value $pipConfig -Encoding UTF8
+Write-Success "pip mirror configured to Tsinghua University mirror (https://pypi.tuna.tsinghua.edu.cn/simple)"
 
 Write-Host ""
 Write-Host "[6/16] Installing Git..." -ForegroundColor White
@@ -389,66 +376,57 @@ if ($downloadSuccess) {
 }
 
 Write-Host ""
-Write-Host "[7/16] Git-LFS installation (optional)..." -ForegroundColor White
+Write-Host "[7/16] Installing Git-LFS..." -ForegroundColor White
 
-if ($WithGitLfs) {
-    $gitLfsVersion = "3.7.1"
-    $gitLfsInstaller = "$env:TEMP\git-lfs-windows-v$gitLfsVersion.exe"
+$gitLfsVersion = "3.7.1"
+$gitLfsInstaller = "$env:TEMP\git-lfs-windows-v$gitLfsVersion.exe"
 
-    $gitLfsDownloadUrls = @(
-        "https://github.com/git-lfs/git-lfs/releases/download/v$gitLfsVersion/git-lfs-windows-v$gitLfsVersion.exe",
-        "https://ghproxy.net/https://github.com/git-lfs/git-lfs/releases/download/v$gitLfsVersion/git-lfs-windows-v$gitLfsVersion.exe"
-    )
+$gitLfsDownloadUrls = @(
+    "https://github.com/git-lfs/git-lfs/releases/download/v$gitLfsVersion/git-lfs-windows-v$gitLfsVersion.exe",
+    "https://ghproxy.net/https://github.com/git-lfs/git-lfs/releases/download/v$gitLfsVersion/git-lfs-windows-v$gitLfsVersion.exe"
+)
 
-    $lfsDownloadSuccess = $false
+$lfsDownloadSuccess = $false
 
-    foreach ($gitLfsUrl in $gitLfsDownloadUrls) {
-        Write-Host "  Downloading from $gitLfsUrl..."
-        try {
-            $headers = @{
-                "User-Agent" = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-            }
-            Invoke-WebRequest -Uri $gitLfsUrl -OutFile $gitLfsInstaller -UseBasicParsing -Headers $headers -ErrorAction Stop
-            $lfsDownloadSuccess = $true
-            if ($gitLfsUrl.Contains("ghproxy")) {
-                $useMirror = $true
-            }
-            break
-        } catch {
-            Write-Host "  Download failed, trying next URL..."
+foreach ($gitLfsUrl in $gitLfsDownloadUrls) {
+    Write-Host "  Downloading from $gitLfsUrl..."
+    try {
+        $headers = @{
+            "User-Agent" = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         }
+        Invoke-WebRequest -Uri $gitLfsUrl -OutFile $gitLfsInstaller -UseBasicParsing -Headers $headers -ErrorAction Stop
+        $lfsDownloadSuccess = $true
+        if ($gitLfsUrl.Contains("ghproxy")) {
+            $useMirror = $true
+        }
+        break
+    } catch {
+        Write-Host "  Download failed, trying next URL..."
     }
+}
 
-    if ($lfsDownloadSuccess) {
-        Write-Host "  Installing..."
-        Start-Process -FilePath $gitLfsInstaller -ArgumentList "/S" -Wait -NoNewWindow
-        Remove-Item $gitLfsInstaller -Force
-        git lfs install
-        Write-Success "Git-LFS $gitLfsVersion installation completed"
-    } else {
-        Write-Warn "Automatic Git-LFS installation failed"
-        Write-Warn "Please install manually from: https://git-lfs.com/"
-        $useMirror = $true
-    }
+if ($lfsDownloadSuccess) {
+    Write-Host "  Installing..."
+    Start-Process -FilePath $gitLfsInstaller -ArgumentList "/S" -Wait -NoNewWindow
+    Remove-Item $gitLfsInstaller -Force
+    git lfs install
+    Write-Success "Git-LFS $gitLfsVersion installation completed"
 } else {
-    Write-Host "  Skipped (use -WithGitLfs to install)" -ForegroundColor Yellow
+    Write-Warn "Automatic Git-LFS installation failed"
+    Write-Warn "Please install manually from: https://git-lfs.com/"
+    $useMirror = $true
 }
 
 Write-Host ""
 Write-Host "[8/16] Configuring Git domestic mirror..." -ForegroundColor White
 
-if ($China) {
-    git config --global url."https://ghproxy.net/https://github.com/".insteadOf "https://github.com/"
+git config --global url."https://ghproxy.net/https://github.com/".insteadOf "https://github.com/"
 
-    $ghProxyConfig = git config --global --get url."https://ghproxy.net/https://github.com/".insteadOf
-    if ($ghProxyConfig -eq "https://github.com/") {
-        Write-Success "Git mirror configured to ghproxy.net (github.com only)"
-        Write-Warn "Restore original git config with: git config --global --unset url.`"https://ghproxy.net/https://github.com/`".insteadOf"
-    } else {
-        Write-Warn "Git mirror configuration may have failed"
-    }
+$ghProxyConfig = git config --global --get url."https://ghproxy.net/https://github.com/".insteadOf
+if ($ghProxyConfig -eq "https://github.com/") {
+    Write-Success "Git mirror configured to ghproxy.net (github.com only)"
 } else {
-    Write-Host "  Skipped (use -China to route github.com through ghproxy.net; global git config left untouched)" -ForegroundColor Yellow
+    Write-Warn "Git mirror configuration may have failed"
 }
 
 Write-Host "  Test verification: ghproxy mirror is approximately 33% faster than original URL" -ForegroundColor Green
@@ -496,7 +474,7 @@ if ($InstallCmake -or $FullInstall) {
             
             $currentPath = [Environment]::GetEnvironmentVariable("PATH", "User")
             $oldPaths = @(
-                "$env:USERPROFILE\AppData\Local\Programs\CMake\bin",
+                "C:\Users\intel\AppData\Local\Programs\CMake\bin",
                 "$env:LOCALAPPDATA\Programs\CMake\bin",
                 "$env:USERPROFILE\tools\cmake\bin"
             )
@@ -577,41 +555,57 @@ $env:MODELSCOPE_API_URL = "https://api.modelscope.cn"
 Write-Success "ModelScope API URL configured"
 
 Write-Host ""
-Write-Host "[12/16] Installing OpenVINO (latest stable)..." -ForegroundColor White
+Write-Host "[12/16] Installing OpenVINO..." -ForegroundColor White
 
-Write-Host "  Installing the latest stable openvino..."
+Write-Host "  Installing openvino and openvino-dev..."
 try {
-    pip install --upgrade openvino --quiet
+    pip install openvino openvino-dev --quiet
     $ovVersion = python -c "import openvino; print(openvino.__version__)"
     Write-Host "  OpenVINO version: $ovVersion"
-    Write-Success "OpenVINO (latest stable) installation completed: $ovVersion"
+    Write-Success "OpenVINO installation completed"
 } catch {
     Write-Warn "OpenVINO installation failed"
 }
 
 Write-Host ""
-Write-Host "[13/16] Installing PyTorch (CPU version)..." -ForegroundColor White
+Write-Host "[13/16] Installing PyTorch with Intel XPU support..." -ForegroundColor White
 
-Write-Host "  Installing PyTorch CPU version..."
-Write-Host "  Note: Specific PyTorch version should be referenced from the target notebook project."
-Write-Host "  This installation provides a base CPU environment. Create project-specific virtual environments for actual deployment."
-
+Write-Host "  Installing PyTorch with Intel XPU support..."
 try {
-    pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu --trusted-host download.pytorch.org --quiet
+    pip install torch torchvision torchaudio --index-url https://pytorch-extension.intel.com/release-whl/stable/xpu/cn/ --trusted-host pytorch-extension.intel.com --quiet
     $torchVersion = python -c "import torch; print(`"PyTorch version:`", torch.__version__)"
     Write-Host "  $torchVersion"
-    Write-Success "PyTorch CPU version installed"
+    Write-Success "PyTorch with Intel XPU support installed"
 } catch {
-    Write-Warn "PyTorch CPU version installation failed"
-    Write-Warn "Trying Tsinghua mirror..."
+    Write-Warn "PyTorch XPU version installation failed"
+    Write-Warn "Falling back to CPU version..."
     try {
-        pip install torch torchvision torchaudio -i https://pypi.tuna.tsinghua.edu.cn/simple --trusted-host pypi.tuna.tsinghua.edu.cn --quiet
+        pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu --trusted-host download.pytorch.org --quiet
         $torchVersion = python -c "import torch; print(`"PyTorch version:`", torch.__version__)"
         Write-Host "  $torchVersion"
-        Write-Success "PyTorch installed (via Tsinghua mirror)"
+        Write-Success "PyTorch CPU version installed"
     } catch {
-        Write-Warn "PyTorch installation failed"
+        Write-Warn "PyTorch CPU version installation failed"
+        Write-Warn "Trying Tsinghua mirror..."
+        try {
+            pip install torch torchvision torchaudio -i https://pypi.tuna.tsinghua.edu.cn/simple --trusted-host pypi.tuna.tsinghua.edu.cn --quiet
+            $torchVersion = python -c "import torch; print(`"PyTorch version:`", torch.__version__)"
+            Write-Host "  $torchVersion"
+            Write-Success "PyTorch installed (via Tsinghua mirror)"
+        } catch {
+            Write-Warn "PyTorch installation failed"
+        }
     }
+}
+
+Write-Host "  Installing Intel PyTorch Extension (IPEX)..."
+try {
+    pip install intel-extension-for-pytorch --index-url https://pytorch-extension.intel.com/release-whl/stable/xpu/cn/ --trusted-host pytorch-extension.intel.com --quiet
+    $ipexVersion = python -c "import intel_extension_for_pytorch as ipex; print(`"IPEX version:`", ipex.__version__)"
+    Write-Host "  $ipexVersion"
+    Write-Success "Intel PyTorch Extension installed"
+} catch {
+    Write-Warn "Intel PyTorch Extension installation failed"
 }
 
 Write-Host ""
@@ -686,13 +680,31 @@ try:
     import torch
     print(f"PyTorch version: {torch.__version__}")
     
-    print("Note: This is a CPU-only installation.")
-    print("For project-specific environments, create virtual environments with versions matching the target notebook.")
-    
+    try:
+        import intel_extension_for_pytorch as ipex
+        print(f"IPEX version: {ipex.__version__}")
+        
+        devices = ipex.xpu.get_device_name()
+        if isinstance(devices, list):
+            print(f"Available XPU devices: {devices}")
+            for i, dev in enumerate(devices):
+                print(f"  Device {i}: {dev}")
+        else:
+            print(f"XPU device: {devices}")
+            
+        xpu_available = ipex.xpu.is_available()
+        if xpu_available:
+            print("✓ Intel XPU available")
+            xpu_count = ipex.xpu.device_count()
+            print(f"  Number of XPU devices: {xpu_count}")
+        else:
+            print("✗ Intel XPU not available")
+            
+    except ImportError:
+        print("IPEX not installed")
+        
     cuda_available = torch.cuda.is_available()
     print(f"CUDA available: {cuda_available}")
-    
-    print("✓ PyTorch CPU version installed and working")
     
 except Exception as e:
     print(f"Error: {e}")
@@ -817,11 +829,7 @@ if ($isUltra) {
 Write-Host "✓ GPU device and driver check completed" -ForegroundColor Green
 Write-Host "✓ Python installed and pip mirror configured" -ForegroundColor Green
 Write-Host "✓ Git installed and ghproxy.net mirror configured" -ForegroundColor Green
-if ($WithGitLfs) {
-    Write-Host "✓ Git-LFS installed" -ForegroundColor Green
-} else {
-    Write-Host "○ Git-LFS skipped (optional, use -WithGitLfs)" -ForegroundColor Gray
-}
+Write-Host "✓ Git-LFS installed" -ForegroundColor Green
 if ($InstallCmake -or $FullInstall) {
     Write-Host "✓ CMake installed" -ForegroundColor Green
 } else {
@@ -833,8 +841,8 @@ if ($InstallVS -or $FullInstall) {
     Write-Host "○ Visual Studio skipped (optional)" -ForegroundColor Gray
 }
 Write-Host "✓ ModelScope installed and HF mirror configured" -ForegroundColor Green
-Write-Host "✓ OpenVINO (latest stable) installed" -ForegroundColor Green
-Write-Host "✓ PyTorch CPU version installed" -ForegroundColor Green
+Write-Host "✓ OpenVINO installed" -ForegroundColor Green
+Write-Host "✓ PyTorch with Intel XPU support installed" -ForegroundColor Green
 Write-Host "✓ Device availability test completed" -ForegroundColor Green
 Write-Host "✓ Environment variables updated" -ForegroundColor Green
 
@@ -855,8 +863,6 @@ Write-Host "3. Hugging Face mirror: https://hf-mirror.com (HF_ENDPOINT set)" -Fo
 Write-Host "4. Update Intel drivers: https://www.intel.com/content/www/us/en/support/detect.html" -ForegroundColor Yellow
 Write-Host "5. Git accesses github.com via ghproxy.net" -ForegroundColor Yellow
 Write-Host "6. CMake and Visual Studio are optional components, install only when C++ compilation is needed" -ForegroundColor Yellow
-Write-Host "7. PyTorch is installed as CPU version. Specific versions should be referenced from target notebook projects." -ForegroundColor Yellow
-Write-Host "8. For actual deployment: Create project-specific virtual environments instead of using Jupyter." -ForegroundColor Yellow
 
 Write-Host ""
 Write-Host "Happy coding with Intel AIPC!" -ForegroundColor Cyan
