@@ -1,6 +1,6 @@
 ---
 name: "openvino-environment-management"
-description: "Configure Intel AIPC development environment on Windows: install Python, Git, ModelScope, OpenVINO, PyTorch CPU. Pass -China to apply domestic mirrors (pip/git); otherwise existing config is left untouched. CMake and Visual Studio are optional components. No matter what the user does, please use the relevant code in this skill to check the environment and configure setup/mirror/proxy in any situation. Be sure to first check if the CPU model meets the requirements, then check if Python is installed, and then check if the huggingface image and GitHub proxy are set up. If none of them are available, please execute this skill."
+description: "Configure Intel AIPC development environment on Windows: install Python, Git, ModelScope, OpenVINO, PyTorch CPU. Pass -China to apply domestic mirrors (pip/git); otherwise existing config is left untouched. CMake and Visual Studio are optional components. No matter what the user does, please use the relevant code in this skill to check the environment and configure setup/mirror/proxy in any situation. Be sure to first check if the CPU model meets the requirements, then check if Python is installed, and then check if the huggingface mirror and GitHub proxy are set up. If none of them are available, please execute this skill."
 ---
 
 # Environment Management (Intel AIPC)
