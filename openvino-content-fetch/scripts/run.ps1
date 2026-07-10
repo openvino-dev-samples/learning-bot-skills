@@ -6,6 +6,7 @@
 
   Usage:
     run.ps1 -Source github [--china]
+    run.ps1 -Source github -Task "Text-to-Image" [-Query "stable diffusion"] [-Limit 10]
     run.ps1 -Source all [--china] [--out C:\path\to\out.json]
     run.ps1 -Download "Qwen2.5-7B-Instruct-INT4-OV" [-OutDir C:\models\qwen] [--china]
     run.ps1 -Status
@@ -16,6 +17,10 @@ param(
   [ValidateSet("github","modelscope","csdn","all")][string]$Source = "all",
   [switch]$China,
   [string]$RepoDir,
+  [string]$Query,
+  [string]$Task,
+  [string]$Category,
+  [int]$Limit,
   [string]$Out,
   [string]$Download,
   [string]$OutDir,
@@ -113,6 +118,10 @@ Log "Running python fetcher..."
 $fetchArgs = @((Join-Path $ScriptDir "fetch_content.py"), "--source", $Source)
 if ($China) { $fetchArgs += "--china" }
 if ($Out) { $fetchArgs += @("--out", $Out) }
+if ($Query) { $fetchArgs += @("--query", $Query) }
+if ($Task) { $fetchArgs += @("--task", $Task) }
+if ($Category) { $fetchArgs += @("--category", $Category) }
+if ($Limit -gt 0) { $fetchArgs += @("--limit", $Limit) }
 
 $TargetRepo = $SharedRepoDir
 if ($RepoDir) { $TargetRepo = $RepoDir }

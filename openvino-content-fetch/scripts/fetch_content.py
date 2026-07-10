@@ -6,6 +6,32 @@ import sys
 import json
 import urllib.request
 
+# 导航元数据包含 OpenVINO(TM) 等符号，强制使用 UTF-8，避免通过 PowerShell 输出 JSON 时
+# 被 Windows 传统代码页中断。
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8")
+
+NOTEBOOKS_SELECTOR_URL = (
+    "https://openvinotoolkit.github.io/openvino_notebooks/notebooks-metadata-map.json"
+)
+
+# 扩展学习者常用表达，避免维护另一份中文 notebook 清单。
+QUERY_ALIASES = {
+    "文生图": "Text-to-Image",
+    "文本生成图像": "Text-to-Image",
+    "文字生成图片": "Text-to-Image",
+    "图生图": "Image-to-Image",
+    "文生视频": "Text-to-Video",
+    "图生视频": "Image-to-Video",
+    "语音识别": "Speech Recognition Audio-to-Text",
+    "文本生成": "Text Generation",
+    "目标检测": "Object Detection",
+    "图像分类": "Image Classification",
+    "图像分割": "Image Segmentation",
+}
+
 # NOTE: BeautifulSoup is imported lazily inside the HTML-scraping parsers only, so that the
 # GitHub-live listing, model download, and --help paths run stdlib-only (no bs4 required).
 
@@ -800,6 +826,112 @@ SEEDED_CSDN = [
 
 # ----------------- Parser Implementations -----------------
 
+def _selector_item(path, metadata):
+    """将一条官方导航元数据转换为本技能的结果结构。"""
+    tags = metadata.get("tags") or {}
+    categories = tags.get("categories") or []
+    tasks = tags.get("tasks") or []
+    libraries = tags.get("libraries") or []
+    other_tags = tags.get("other") or []
+    links = metadata.get("links") or {}
+    notebook_path = metadata.get("path") or path
+    slug = notebook_path.split("/", 1)[0]
+    github_url = links.get("github") or (
+        "https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/"
+        + notebook_path
+    )
+    return {
+        "slug": slug,
+        "path": notebook_path,
+        "title": metadata.get("title") or slug.replace("-", " ").title(),
+        "description": "",
+        "category": categories[0] if categories else "",
+        "categories": categories,
+        "tasks": tasks,
+        "libraries": libraries,
+        "tags": other_tags,
+        "url": github_url,
+        "raw_url": (
+            "https://raw.githubusercontent.com/openvinotoolkit/openvino_notebooks/"
+            f"latest/notebooks/{notebook_path}"
+        ),
+        "docs_url": links.get("docs"),
+        "image_url": metadata.get("imageUrl"),
+        "created_date": metadata.get("createdDate"),
+        "modified_date": metadata.get("modifiedDate"),
+        "source": "openvino-notebooks-selector",
+        "source_url": "https://openvinotoolkit.github.io/openvino_notebooks/",
+    }
+
+
+def parse_notebooks_selector_metadata(metadata_map):
+    """将官方导航页的元数据映射解析为 notebook 条目。"""
+    if not isinstance(metadata_map, dict):
+        raise ValueError("notebook selector metadata must be a JSON object")
+    return [_selector_item(path, metadata) for path, metadata in metadata_map.items()]
+
+
+def _search_text(item):
+    fields = [
+        item.get("slug", ""), item.get("path", ""), item.get("title", ""),
+        item.get("description", ""), item.get("category", ""),
+    ]
+    for key in ("categories", "tasks", "libraries", "tags"):
+        fields.extend(item.get(key) or [])
+    return " ".join(str(value) for value in fields).casefold()
+
+
+def filter_notebooks(items, query=None, task=None, category=None, limit=None):
+    """使用自由文本和官方导航标签筛选 notebook。"""
+    query_terms = []
+    if query:
+        alias_expansions = [
+            expansion for alias, expansion in QUERY_ALIASES.items() if alias in query
+        ]
+        if alias_expansions:
+            query_terms.extend(" ".join(alias_expansions).casefold().split())
+        else:
+            query_terms.extend(query.casefold().split())
+
+    task_folded = task.casefold() if task else None
+    category_folded = category.casefold() if category else None
+    matched = []
+    for item in items:
+        searchable = _search_text(item)
+        if query_terms and not all(term in searchable for term in query_terms):
+            continue
+        if task_folded and task_folded not in [str(v).casefold() for v in item.get("tasks", [])]:
+            continue
+        categories = item.get("categories") or ([item.get("category")] if item.get("category") else [])
+        if category_folded and category_folded not in [str(v).casefold() for v in categories]:
+            continue
+        matched.append(item)
+        if limit and len(matched) >= limit:
+            break
+    return matched
+
+
+def fetch_notebooks_selector():
+    """抓取 OpenVINO Notebooks 导航页使用的结构化元数据。"""
+    headers = {
+        "User-Agent": "openvino-content-fetch",
+        "Accept": "application/json",
+    }
+    try:
+        req = urllib.request.Request(NOTEBOOKS_SELECTOR_URL, headers=headers)
+        with urllib.request.urlopen(req, timeout=15) as response:
+            metadata_map = json.loads(response.read().decode("utf-8"))
+        items = parse_notebooks_selector_metadata(metadata_map)
+    except Exception as e:
+        log(f"OpenVINO Notebooks navigation index failed ({e}). Will fall back.")
+        return {"status": "error", "items": []}
+    if not items:
+        log("OpenVINO Notebooks navigation index returned no notebooks; falling back.")
+        return {"status": "error", "items": []}
+    log(f"Navigation index listed {len(items)} notebooks with official task/category tags.")
+    return {"status": "ok", "items": items, "index_url": NOTEBOOKS_SELECTOR_URL}
+
+
 def fetch_github_notebooks_live(china=False):
     """List the CURRENT notebooks from openvino_notebooks@latest via the GitHub API.
 
@@ -1130,6 +1262,14 @@ def main():
                         help="Specific data source to fetch.")
     parser.add_argument("--repo-dir", type=str, default=None,
                         help="Absolute path to the cloned openvino_notebooks repository.")
+    parser.add_argument("--query", type=str, default=None,
+                        help="notebook 自由文本搜索；支持文生图等常用中文表达。")
+    parser.add_argument("--task", type=str, default=None,
+                        help="OpenVINO Notebooks 导航页中的精确 AI Task 标签。")
+    parser.add_argument("--category", type=str, default=None,
+                        help="OpenVINO Notebooks 导航页中的精确 Category 标签。")
+    parser.add_argument("--limit", type=int, default=None,
+                        help="最多返回的 notebook 匹配数量。")
     parser.add_argument("--china", action="store_true",
                         help="Use Chinese mirrors and local endpoints.")
     parser.add_argument("--out", type=str, default=None,
@@ -1165,19 +1305,31 @@ def main():
     
     total_count = 0
     
-    # 1. GitHub — prefer the LIVE latest-branch listing, then a local clone, then seeded fallback.
+    # 1. Notebooks: prefer the official navigation index, then GitHub/local/seeded fallbacks.
     if args.source in ["github", "all"]:
-        github_data = fetch_github_notebooks_live(china=args.china)
+        github_data = fetch_notebooks_selector()
         if github_data["status"] == "ok":
-            log("GitHub source: live latest-branch listing.")
+            log("GitHub source: official OpenVINO Notebooks navigation index.")
         else:
-            repo_path = args.repo_dir
-            if not repo_path:
-                user_profile = os.environ.get("USERPROFILE", "")
-                if user_profile:
-                    repo_path = os.path.join(user_profile, ".openvino", "openvino_notebooks")
-            log(f"GitHub source: falling back to local repo parse at {repo_path} (else seeded dataset).")
-            github_data = parse_github_notebooks(repo_path)
+            github_data = fetch_github_notebooks_live(china=args.china)
+            if github_data["status"] == "ok":
+                log("GitHub source: live latest-branch directory listing fallback.")
+            else:
+                repo_path = args.repo_dir
+                if not repo_path:
+                    user_profile = os.environ.get("USERPROFILE", "")
+                    if user_profile:
+                        repo_path = os.path.join(user_profile, ".openvino", "openvino_notebooks")
+                log(f"GitHub source: falling back to local repo parse at {repo_path} (else seeded dataset).")
+                github_data = parse_github_notebooks(repo_path)
+        github_data["items"] = filter_notebooks(
+            github_data["items"], query=args.query, task=args.task,
+            category=args.category, limit=args.limit,
+        )
+        github_data["filters"] = {
+            "query": args.query, "task": args.task,
+            "category": args.category, "limit": args.limit,
+        }
         final_result["sources"]["github"] = github_data
         if github_data["status"] == "ok":
             total_count += len(github_data["items"])
