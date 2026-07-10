@@ -1,121 +1,114 @@
 ---
 name: openvino-content-fetch
 description: |
-  Fetches, parses, and indexes notebooks, sample codes, models, and articles from OpenVINO GitHub
-  repository, ModelScope Intel AI PC Zone, and CSDN Intel Developer Zone — AND locates/downloads
-  models and pre-converted OpenVINO IR from ModelScope (Model Repo + Intel AI PC Zone) and the Intel
-  OpenVINO Model Hub for local inference on Intel AIPC.
-  Call this skill when the student or learning-bot asks for notebooks, tutorials, sample codes,
-  ModelScope updates, CSDN developer articles, learning path recommendations, OR to find / resolve /
-  download a model or pre-converted IR for local OpenVINO inference.
-  Triggers: fetch notebooks, get tutorials, find OpenVINO samples, get articles, ModelScope updates,
-  CSDN posts, content fetch, recommend notebooks, download model, get IR, resolve model, find
-  OpenVINO-optimized model.
+  从 OpenVINO GitHub 仓库、ModelScope Intel AI PC Zone 和 CSDN Intel 开发者专区抓取、解析并索引
+  notebook、示例代码、模型和文章 —— 同时从 ModelScope（Model Repo + Intel AI PC Zone）和 Intel
+  OpenVINO Model Hub 定位/下载模型及预转换的 OpenVINO IR，用于在 Intel AIPC 上进行本地推理。
+  当学习者或 learning-bot 需要 notebook、教程、示例代码、ModelScope 更新、CSDN 开发者文章、学习
+  路径推荐，或者需要查找 / 解析 / 下载模型或预转换 IR 用于本地 OpenVINO 推理时，调用本技能。
+  触发词：fetch notebooks、get tutorials、find OpenVINO samples、get articles、ModelScope updates、
+  CSDN posts、content fetch、recommend notebooks、download model、get IR、resolve model、
+  find OpenVINO-optimized model。
 ---
 
-# OpenVINO Content Fetch — learning bot pipeline step
+# OpenVINO Content Fetch —— learning bot 流水线步骤
 
-This skill owns both **content** and **model files** for the learning bot:
+本技能同时负责 learning bot 的**内容**和**模型文件**两部分：
 
-1. **Content** — notebooks, tutorials, sample code, and articles from the OpenVINO GitHub repo,
-   ModelScope AI PC Zone, and CSDN Intel Developer Zone. It crawls/reads these resources and returns
-   a clean, structured index inside a standard `[SKILL_RESULT]` block. The GitHub notebook list is
-   fetched **live from the `latest` branch** (GitHub API), so recommendations always reflect the
-   current notebooks; a seeded list is used only as an offline/failure fallback.
-2. **Model files / IR** — it locates and downloads models and **pre-converted OpenVINO IR** from
-   ModelScope (Model Repo + Intel AI PC Zone) and the Intel OpenVINO Model Hub. It resolves a model
-   id, prefers an existing OpenVINO IR when available, reports size/license before large downloads,
-   and fetches the files to a local directory for local OpenVINO inference on Intel AIPC.
+1. **内容** —— 来自 OpenVINO GitHub 仓库、ModelScope AI PC Zone 和 CSDN Intel 开发者专区的
+   notebook、教程、示例代码和文章。它会爬取/读取这些资源，并在标准的 `[SKILL_RESULT]` 块中返回
+   干净、结构化的索引。GitHub notebook 列表**实时从 `latest` 分支拉取**（GitHub API），因此推荐
+   始终反映当前的 notebook；内置的种子列表仅在离线/失败时作为回退使用。
+2. **模型文件 / IR** —— 它从 ModelScope（Model Repo + Intel AI PC Zone）和 Intel OpenVINO Model
+   Hub 定位并下载模型及**预转换的 OpenVINO IR**。它会解析 model id，优先选择已有的 OpenVINO IR，
+   在大文件下载前报告大小/许可证，并把文件下载到本地目录，用于在 Intel AIPC 上进行本地 OpenVINO 推理。
 
-## Parameters
+## 参数
 
-| Parameter | Description |
+| 参数 | 说明 |
 |---|---|
-| -Source | github (notebooks), modelscope (AI PC zone), csdn (Intel dev zone), or all (default) |
-| -Download | A model id to download (e.g. `Qwen2.5-7B-Instruct-INT4-OV`); triggers download mode |
-| -OutDir | Local directory to download the model / IR into (defaults to `~/.openvino/models`) |
-| -China | Switch to use local mirrors/endpoints |
+| -Source | github（notebook）、modelscope（AI PC zone）、csdn（Intel 开发者专区），或 all（默认） |
+| -Download | 要下载的 model id（例如 `Qwen2.5-7B-Instruct-INT4-OV`）；触发下载模式 |
+| -OutDir | 模型 / IR 下载到的本地目录（默认为 `~/.openvino/models`） |
+| -China | 切换为使用国内镜像/端点 |
 
 ```powershell
-# Fetch GitHub notebooks only
+# 仅抓取 GitHub notebook
 run.ps1 -Source github
 
-# Fetch everything using China mirrors
+# 使用国内镜像抓取全部内容
 run.ps1 -Source all -China
 
-# Download a pre-converted OpenVINO IR model from ModelScope
+# 从 ModelScope 下载预转换的 OpenVINO IR 模型
 run.ps1 -Download "Qwen2.5-7B-Instruct-INT4-OV" -OutDir "D:\models\qwen2.5-7b"
 ```
 
-## Content fetch — [SKILL_RESULT] (fetch contract)
+## 内容抓取 —— [SKILL_RESULT]（抓取契约）
 
 ```
 [SKILL_RESULT]
 status=ok|error
 source=github|modelscope|csdn|all
-count=<number of items fetched>
-data=[JSON-formatted list of items]
+count=<抓取到的条目数>
+data=[JSON 格式的条目列表]
 [/SKILL_RESULT]
 ```
 
-## Model download
+## 模型下载
 
-### Where to find models
+### 在哪里找模型
 
-1. **ModelScope — OpenVINO organization (prefer pre-converted IR)**
-   - **URL:** https://www.modelscope.cn/organization/OpenVINO
-   - OpenVINO-optimized models, many already exported to IR. Prefer these — no conversion needed.
-2. **ModelScope — Intel AI PC Zone model list**
-   - **URL:** https://modelscope.cn/brand/view/AI_PC?branch=2&tree=1
-   - Models curated for Intel AI PC; check for an IR / OpenVINO variant before downloading the source.
+1. **ModelScope —— OpenVINO 组织（优先选预转换 IR）**
+   - **URL：** https://www.modelscope.cn/organization/OpenVINO
+   - OpenVINO 优化过的模型，很多已导出为 IR。优先选这些 —— 无需转换。
+2. **ModelScope —— Intel AI PC Zone 模型列表**
+   - **URL：** https://modelscope.cn/brand/view/AI_PC?branch=2&tree=1
+   - 面向 Intel AI PC 精选的模型；下载源模型前先检查是否有 IR / OpenVINO 变体。
 3. **Intel OpenVINO Model Hub**
-   - **URL:** https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/model-hub.html
-   - Fallback source of models optimized for Intel hardware (different page structure than ModelScope).
+   - **URL：** https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/model-hub.html
+   - 针对 Intel 硬件优化的模型的回退来源（页面结构与 ModelScope 不同）。
 
-### Download procedure
+### 下载流程
 
-1. **Resolve** the model id (from the user, or by searching the sources above via `-Source modelscope`).
-   Prefer a variant that already ships OpenVINO IR (`openvino_model.xml/.bin`); if only the source
-   model exists, flag that conversion (via `openvino-pipeline-optimization`) will be needed.
-2. **Report before downloading:** model id, size, license, and whether IR is available — confirm
-   before pulling multi-GB assets.
-3. **Download** to a local directory using the ModelScope SDK:
+1. **解析** model id（来自用户，或通过 `-Source modelscope` 在上述来源中搜索）。优先选择已经附带
+   OpenVINO IR（`openvino_model.xml/.bin`）的变体；如果只有源模型，标注需要转换（通过
+   `openvino-pipeline-optimization`）。
+2. **下载前先报告：** model id、大小、许可证以及是否有 IR —— 在拉取数 GB 资产前先确认。
+3. **下载**到本地目录，使用 ModelScope SDK：
    ```python
    from modelscope import snapshot_download
-   local_dir = snapshot_download("OpenVINO/<model-id>")   # e.g. an OpenVINO-optimized repo
+   local_dir = snapshot_download("OpenVINO/<model-id>")   # 例如某个 OpenVINO 优化过的仓库
    ```
-   ModelScope is domestic (fast in China by default). Set `local_dir=` to a persisted path so retries
-   don't re-download.
-4. **Report result:** local path + which files (IR vs source), so the pipeline / env skills can use it.
+   ModelScope 是国内源（在中国默认较快）。设置 `local_dir=` 为持久化路径，这样重试时不会重复下载。
+4. **报告结果：** 本地路径 + 包含哪些文件（IR vs 源模型），以便 pipeline / env 技能后续使用。
 
-### Model download — [SKILL_RESULT] (download contract)
+### 模型下载 —— [SKILL_RESULT]（下载契约）
 
 ```
 [SKILL_RESULT]
 status=ok|error
 action=download
-model_id=<resolved model id>
-local_dir=<absolute local path>
+model_id=<解析出的 model id>
+local_dir=<绝对本地路径>
 has_ir=true|false
 [/SKILL_RESULT]
 ```
 
-## API Reference (ModelScope)
+## API 参考（ModelScope）
 
-Programmatic model lookup / download on ModelScope:
+在 ModelScope 上以编程方式查找 / 下载模型：
 
-**Base URL:** https://modelscope.cn/openapi/v1  ·  **Auth:** Bearer Token
+**Base URL：** https://modelscope.cn/openapi/v1  ·  **鉴权：** Bearer Token
 
-- `GET /models` — list / search models (filter by task, keyword)
-- `GET /models/{owner}/{repo_name}` — model details (files, size, license)
+- `GET /models` —— 列出 / 搜索模型（按 task、关键词过滤）
+- `GET /models/{owner}/{repo_name}` —— 模型详情（文件、大小、许可证）
 
-**OpenAPI docs:** https://modelscope.cn/docs/openapi
+**OpenAPI 文档：** https://modelscope.cn/docs/openapi
 
-## Testing
-Run the offline smoke test (uses stdlib-only paths + seeded fallbacks; no venv, bs4, or network
-required) to validate the fetch and download contracts:
+## 测试
+运行离线冒烟测试（仅使用标准库路径 + 内置种子回退；无需 venv、bs4 或网络）来验证抓取和下载契约：
 ```powershell
 powershell -ExecutionPolicy Bypass -File test_content_fetch.ps1
 ```
-Exit code `0` = all checks passed. It asserts a well-formed `[SKILL_RESULT]` (status/count) for each
-source and the `action=download` contract.
+退出码 `0` = 所有检查通过。它会断言每个 source 都有格式良好的 `[SKILL_RESULT]`（status/count），
+以及 `action=download` 契约。

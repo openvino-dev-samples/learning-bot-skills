@@ -1,14 +1,14 @@
 {
-  "display_name": "OpenVINO Pipeline Optimization",
-  "display_description": "A developer scaffold + reference standard for building multi-model OpenVINO pipeline demos (Intel AIPC only)",
-  "detail_describe": "A developer-facing direction + reference standard (NOT a ready-made pipeline). Grounded in the openvino_notebooks repo, it resolves one or more notebooks (or a free-form goal) into a multi-model pipeline skeleton: discover stages, suggest per-role device (NPU/GPU/CPU) and precision (INT4/INT8 via NNCF), benchmark end-to-end + per-stage, and provide a client+server template to deploy the demo as a local service. The bundled scripts are reference implementations, not a mandatory path — model conversion and inference follow the chosen notebook's own code. It supplies shared conventions ([SKILL_RESULT] contract, lifecycle, directory layout); developers build their own pipeline demo on top. No hardcoded model IDs or Python/OpenVINO version pin. Unwired pipeline families return HTTP 501 instead of faking output. Runs locally, offline / China-mirror aware.",
+  "display_name": "OpenVINO 流水线优化",
+  "display_description": "一套面向开发者的脚手架 + 参考标准，用于构建多模型 OpenVINO 流水线 demo（仅限 Intel AIPC）",
+  "detail_describe": "一套面向开发者的方向 + 参考标准（不是现成的流水线）。以 openvino_notebooks 仓库为依据，把一个或多个 notebook（或一个自由描述的目标）解析为多模型流水线骨架：发现各阶段、建议每角色的设备（NPU/GPU/CPU）和精度（INT4/INT8，经 NNCF）、做端到端 + 逐阶段基准测试，并提供 client+server 模板把 demo 部署为本地服务。随附脚本是参考实现，不是强制路径 —— 模型转换和推理遵循所选 notebook 自己的代码。它提供共享约定（[SKILL_RESULT] 契约、生命周期、目录布局）；开发者在此之上构建自己的流水线 demo。不硬编码 model ID，也不锁定 Python/OpenVINO 版本。未接入的流水线族返回 HTTP 501，而不是伪造输出。本地运行，支持离线 / 国内镜像。",
   "name": "openvino-pipeline-optimization",
   "icon": "",
   "use_cases": [
-    "Scaffold a multi-model pipeline demo (code + reference standard) for developers",
-    "Discover and compose stages from notebook(s); assign device and precision",
-    "Benchmark end-to-end + per-stage and locate the bottleneck",
-    "Deploy the pipeline demo as a local service (client + server)"
+    "为开发者搭建多模型流水线 demo（代码 + 参考标准）",
+    "从 notebook 发现并组合各阶段；分配设备和精度",
+    "做端到端 + 逐阶段基准测试并定位瓶颈",
+    "把流水线 demo 部署为本地服务（client + server）"
   ],
   "author": "Intel AIPC Skills",
   "version": "1.2.0"

@@ -1,108 +1,99 @@
 ---
 name: openvino-pipeline-optimization
 description: |
-  A developer scaffold + reference standard for building multi-model OpenVINO pipeline demos on
-  Intel AIPC, grounded in the openvino_notebooks repo (github.com/openvinotoolkit/openvino_notebooks).
-  Given one or more notebook slugs (e.g. whisper-asr-genai, llm-rag-langchain, vlm-chatbot,
-  openvoice2-and-melotts) OR a free-form goal (e.g. "local ASR -> LLM -> TTS"), it DISCOVERS the
-  pipeline stages from the notebooks themselves, suggests a per-stage optimization plan (device
-  NPU/GPU/CPU + precision INT4/INT8 via NNCF), benchmarks end-to-end + per-stage, and provides a
-  client+server template to deploy the demo as a local service. It is a direction + a set of
-  conventions — NOT a turnkey auto-builder. The bundled scripts are REFERENCE implementations, not a
-  mandatory path: model conversion and inference must follow the chosen notebook's own code, not a
-  generic script. Unwired pipeline families return 501, never fake output.
-  Use when a developer wants to build/scaffold a demo, compose/chain multiple models into one pipeline,
-  place stages on devices, tune precision, benchmark, or serve a pipeline (client+server). Trigger on:
-  build a demo / scaffold a pipeline / multi-model pipeline / chain models / ASR->LLM->TTS / RAG /
-  vision chatbot / device placement / benchmark the pipeline / deploy as a service / serve a pipeline /
-  client server / reference standard.
-  Requires Intel AIPC hardware.
+  一套面向开发者的脚手架 + 参考标准，用于在 Intel AIPC 上构建多模型 OpenVINO 流水线 demo，
+  以 openvino_notebooks 仓库（github.com/openvinotoolkit/openvino_notebooks）为依据。
+  给定一个或多个 notebook slug（例如 whisper-asr-genai、llm-rag-langchain、vlm-chatbot、
+  openvoice2-and-melotts）或一个自由描述的目标（例如 "local ASR -> LLM -> TTS"），它会从 notebook
+  本身**发现**流水线各阶段，给出每个阶段的优化建议（设备 NPU/GPU/CPU + 精度 INT4/INT8，经 NNCF），
+  做端到端 + 逐阶段基准测试，并提供 client+server 模板把 demo 部署为本地服务。它提供的是**方向 +
+  一套约定**，而**不是**开箱即用的自动构建器。随附的脚本是**参考实现**，不是强制路径：模型转换和
+  推理必须遵循所选 notebook 自己的代码，而不是某个通用脚本。未接入的流水线族返回 501，绝不伪造输出。
+  当开发者想要构建/搭建 demo、把多个模型组合/串联成一条流水线、把阶段放到设备上、调精度、做基准
+  测试，或把流水线部署为服务（client+server）时使用本技能。触发词：build a demo / scaffold a
+  pipeline / multi-model pipeline / chain models / ASR->LLM->TTS / RAG / vision chatbot /
+  device placement / benchmark the pipeline / deploy as a service / serve a pipeline /
+  client server / reference standard。
+  需要 Intel AIPC 硬件。
 ---
 
-# OpenVINO Pipeline Optimization — developer scaffold & reference standard
+# OpenVINO Pipeline Optimization —— 开发者脚手架 & 参考标准
 
-This skill gives a developer a **direction and a set of conventions** for building a multi-model
-OpenVINO pipeline demo on Intel AIPC — not a ready-made pipeline. It shows *how* to discover stages
-from `openvino_notebooks`, *how* to place them on devices/precisions, *how* to benchmark, and *how*
-to wrap them behind a **client + server**. The actual pipeline is assembled from the notebook(s) the
-user chooses; the developer fills in stage-specific logic. The skill supplies structure, suggested
-defaults, and honest reporting — never a canned pipeline.
+本技能为开发者提供在 Intel AIPC 上构建多模型 OpenVINO 流水线 demo 的**方向和一套约定** ——
+而不是一条现成的流水线。它展示*如何*从 `openvino_notebooks` 发现各阶段、*如何*把各阶段放到
+设备/精度上、*如何*做基准测试，以及*如何*用 **client + server** 把它们封装起来。真正的流水线
+由用户选定的 notebook 组合搭建而成；开发者补齐各阶段特定的逻辑。本技能提供结构、建议默认值和
+诚实的报告 —— 绝不提供预制的流水线。
 
-The spine (a suggested path, trim/replace to fit the notebook):
+主线（一条建议路径，按 notebook 需要裁剪/替换）：
 
-**pick notebook(s) → discover & compose stages → optimize (device + precision) → benchmark → serve (client+server)**
+**选 notebook → 发现并组合各阶段 → 优化（设备 + 精度）→ 基准测试 → 部署（client+server）**
 
-### What is fixed vs. what you build
+### 哪些是固定的 vs. 哪些由你构建
 
-| Fixed (the conventions this skill standardizes) | You build (from the chosen notebook) |
+| 固定（本技能标准化的约定） | 由你构建（来自所选 notebook） |
 | --- | --- |
-| Directory layout, `[SKILL_RESULT]` contract, lifecycle flags | The stage graph and how stages connect |
-| The client+server *pattern* (endpoints, health, 501 honesty) | Each stage's model load / conversion / inference code |
-| Suggested device/precision heuristics (overridable) | The authoritative conversion + inference — copied/adapted from the notebook |
+| 目录布局、`[SKILL_RESULT]` 契约、生命周期参数 | 阶段图以及各阶段如何连接 |
+| client+server *模式*（endpoints、health、501 诚实） | 每个阶段的模型加载 / 转换 / 推理代码 |
+| 建议的设备/精度启发式（可覆盖） | 权威的转换 + 推理 —— 从 notebook 复制/改编而来 |
 
-> **Scripts are reference, not law.** Everything under `scripts/` (`resolve_pipeline.py`,
-> `optimize.py`, `bench.py`, `server.py`, `client.py`) is a **reference implementation** of these
-> conventions. Use them as a starting point and adapt freely. Where a script's generic behaviour
-> (e.g. a one-size `optimum-cli export openvino`) disagrees with the notebook, **the notebook wins** —
-> its model loading, conversion, and inference are the source of truth.
+> **脚本是参考，不是法律。** `scripts/` 下的所有内容（`resolve_pipeline.py`、`optimize.py`、
+> `bench.py`、`server.py`、`client.py`）都是这些约定的**参考实现**。把它们当作起点，可自由改编。
+> 当某个脚本的通用行为（例如一刀切的 `optimum-cli export openvino`）与 notebook 冲突时，
+> **以 notebook 为准** —— 它的模型加载、转换和推理才是权威来源。
 
-> **Generic by design.** No model IDs are hardcoded — stages are discovered from the chosen notebooks.
-> No model-family switch. A pipeline family without a wired runner returns HTTP 501; the skill never
-> fabricates output.
+> **通用为设计原则。** 不硬编码任何 model ID —— 各阶段从所选 notebook 中发现。没有模型族开关。
+> 未接入 runner 的流水线族返回 HTTP 501；本技能绝不伪造输出。
 
 ---
 
-## !! CRITICAL: environment / mirrors / persistence !!
+## !! 关键：环境 / 镜像 / 持久化 !!
 
-| Need | Detail |
+| 需求 | 详情 |
 | --- | --- |
-| Intel AIPC (LNL/ARL/PTL/WCL), git | verify before running |
-| Python 3.x | **no hard pin** — use a version the chosen notebook supports (its `requirements.txt` decides). The venv is created with whatever `python` resolves to |
-| `--china` | pip=tuna, HF=hf-mirror, notebooks=gitcode; no network probing |
-| Persisted dirs (outside sandbox) | `%USERPROFILE%\.openvino\`: `venv-pipeopt\`, `openvino_notebooks\`, `ir\<slug>\`, `log\` |
+| Intel AIPC (LNL/ARL/PTL/WCL)、git | 运行前先验证 |
+| Python 3.x | **不做硬性锁定** —— 使用所选 notebook 支持的版本（由它的 `requirements.txt` 决定）。venv 用当前 `python` 解析到的版本创建 |
+| `--china` | pip=tuna、HF=hf-mirror、notebooks=gitcode；不做网络探测 |
+| 持久化目录（sandbox 之外） | `%USERPROFILE%\.openvino\`：`venv-pipeopt\`、`openvino_notebooks\`、`ir\<slug>\`、`log\` |
 
-Deps install into the persisted venv on first run: a **minimal core** the reference scripts need
-(`openvino, nncf, optimum-intel, fastapi, uvicorn, pydantic, nbformat, numpy` — plus
-`openvino-genai`/`openvino-tokenizers` only when a stage uses them) **plus each selected notebook's
-own `requirements.txt`** (`notebooks/<slug>/requirements.txt`), so model-specific deps always match
-the chosen notebook. There is no static skill-level requirements file, and no forced version pins —
-dependencies are resolved from the notebook(s) you build. If a notebook pins its own OpenVINO/Python
-version, follow the notebook.
+首次运行时依赖装入持久化 venv：参考脚本所需的**最小核心**
+（`openvino, nncf, optimum-intel, fastapi, uvicorn, pydantic, nbformat, numpy` —— 仅当某阶段用到时
+再加 `openvino-genai`/`openvino-tokenizers`），**加上每个所选 notebook 自己的 `requirements.txt`**
+（`notebooks/<slug>/requirements.txt`），这样模型相关依赖始终与所选 notebook 匹配。没有技能级的静态
+requirements 文件，也没有强制的版本锁定 —— 依赖从你构建的 notebook 中解析而来。如果某个 notebook
+锁定了自己的 OpenVINO/Python 版本，以 notebook 为准。
 
 ---
 
-## Build & optimize (reference flow)
+## 构建 & 优化（参考流程）
 
-The commands below drive the **reference** scripts. They are a convenient starting point; for real
-conversion/inference, prefer the steps in the chosen notebook and adapt the scripts to match.
+下面的命令驱动的是**参考**脚本。它们是方便的起点；真正的转换/推理请优先采用所选 notebook 里的
+步骤，并据此改编脚本。
 
 ```powershell
-# single notebook
+# 单个 notebook
 run.ps1 --china --slug whisper-asr-genai
-# compose multiple notebooks into one pipeline
+# 把多个 notebook 组合成一条流水线
 run.ps1 --china --slug whisper-asr-genai,llm-rag-langchain,openvoice2-and-melotts
-# by goal (matched against the repo's notebooks/README.md index)
+# 按目标（与仓库的 notebooks/README.md 索引匹配）
 run.ps1 --china --goal "local ASR to LLM to TTS"
-# resolve + plan only (no downloads)
+# 仅解析 + 规划（不下载）
 run.ps1 --dry-run --slug vlm-chatbot
 ```
 
-Flow: **resolve** (`resolve_pipeline.py` — discover stages from `notebooks/<slug>/`) →
-**optimize** (`optimize.py` — a reference exporter that calls `optimum-cli export openvino` + NNCF +
-device → `pipeline-plan.json`) → **benchmark** (`bench.py` — per-stage + e2e, bottleneck,
-`[SKILL_RESULT]`).
+流程：**resolve**（`resolve_pipeline.py` —— 从 `notebooks/<slug>/` 发现各阶段）→
+**optimize**（`optimize.py` —— 一个调用 `optimum-cli export openvino` + NNCF + 设备的参考导出器
+→ `pipeline-plan.json`）→ **benchmark**（`bench.py` —— 逐阶段 + 端到端、瓶颈、`[SKILL_RESULT]`）。
 
-> The reference `optimize.py` uses a single generic `optimum-cli export openvino`. This works for many
-> standard models but is **not authoritative**: if the notebook converts a model a specific way
-> (custom export args, `ov.convert_model`, manual NNCF config, stateful/GenAI export, multiple
-> sub-models), replace the export call with the notebook's own conversion. Same for inference — the
-> notebook's runtime code is the reference, not `server.py`'s generic executor.
+> 参考的 `optimize.py` 用的是单一通用的 `optimum-cli export openvino`。它对很多标准模型有效，但
+> **并不权威**：如果 notebook 以特定方式转换模型（自定义 export 参数、`ov.convert_model`、手写
+> NNCF 配置、stateful/GenAI 导出、多个子模型），请把导出调用替换为 notebook 自己的转换方式。推理
+> 同理 —— notebook 的运行时代码才是参考，而不是 `server.py` 的通用执行器。
 
-**Suggested** per-role device/precision heuristics (defaults only, always overridable via
-`--device` / `--precision`, and superseded by whatever the notebook does): LLM→GPU/INT4,
-encoder→GPU/INT8, retriever→CPU/INT8, pre/post→CPU/FP16.
+**建议的**每角色设备/精度启发式（仅为默认值，始终可通过 `--device` / `--precision` 覆盖，并被
+notebook 的实际做法取代）：LLM→GPU/INT4、encoder→GPU/INT8、retriever→CPU/INT8、pre/post→CPU/FP16。
 
-### `[SKILL_RESULT]` (build/benchmark contract)
+### `[SKILL_RESULT]`（构建/基准测试契约）
 ```
 [SKILL_RESULT]
 status=ok|error|timeout
@@ -117,79 +108,78 @@ ir_dir=%USERPROFILE%\.openvino\ir\<slug>
 
 ---
 
-## Serve the pipeline (client + server)
+## 部署流水线（client + server）
 
-Deploy the built+optimized pipeline as a local HTTP service, then talk to it with the CLI client.
+把构建并优化好的流水线部署为本地 HTTP 服务，然后用 CLI client 与之交互。
 
 ```powershell
-run.ps1 --serve --slug whisper-asr-genai [--port 18790]   # build+optimize (reuse IR) then serve
+run.ps1 --serve --slug whisper-asr-genai [--port 18790]   # 构建+优化（复用 IR）后部署
 ```
 
-`--serve` resolves → optimizes (reusing existing IR) → launches `server.py` in the background →
-polls `/api/health` → emits a `[SKILL_RESULT]` with `service_url` and prints client usage.
+`--serve` 会 resolve → optimize（复用已有 IR）→ 在后台启动 `server.py` → 轮询 `/api/health` →
+输出带 `service_url` 的 `[SKILL_RESULT]` 并打印 client 用法。
 
-**Architecture**
+**架构**
 ```
  CLI / HTTP client  ──HTTP :18790──▶  server.py (FastAPI)  ──▶  OpenVINO pipeline stages (from pipeline-plan.json)
    client.py / curl                     /api/run · /api/health · /v1/chat/completions · /api/shutdown
 ```
 
-**Endpoints** (server on `127.0.0.1:18790`)
+**Endpoints**（服务运行在 `127.0.0.1:18790`）
 
-| Endpoint | Method | Purpose |
+| Endpoint | Method | 用途 |
 | --- | --- | --- |
-| `/api/health` | GET | status + per-stage load state |
-| `/api/run` | POST | generic executor: `{input, params}` → `{output, per_stage_ms, e2e_ms}` |
-| `/v1/chat/completions` | POST | OpenAI-compatible (chat/LLM & RAG families) |
-| `/api/shutdown` | POST | graceful exit |
+| `/api/health` | GET | 状态 + 各阶段加载情况 |
+| `/api/run` | POST | 通用执行器：`{input, params}` → `{output, per_stage_ms, e2e_ms}` |
+| `/v1/chat/completions` | POST | 兼容 OpenAI（chat/LLM & RAG 族） |
+| `/api/shutdown` | POST | 优雅退出 |
 
 **Client**
 ```powershell
 python scripts\client.py --health
 python scripts\client.py --run --input "your input"
-python scripts\client.py --chat "hello"          # chat/RAG pipelines
+python scripts\client.py --chat "hello"          # chat/RAG 流水线
 curl http://127.0.0.1:18790/api/health
 ```
 
-**Honesty:** a pipeline family with no wired runner returns **HTTP 501** ("runner for family 'X' not
-implemented yet") — the developer wires that family's runner in `server.py::PIPELINE_RUNNERS` using
-the **notebook's own inference code**. Nothing is faked. `server.py --stub` returns canned outputs for
-wiring/testing the client without hardware. The generic `/api/run` executor is a convenience shell,
-not a substitute for the notebook's pipeline logic.
+**诚实原则：** 未接入 runner 的流水线族返回 **HTTP 501**（"runner for family 'X' not implemented
+yet"）—— 开发者用 **notebook 自己的推理代码**在 `server.py::PIPELINE_RUNNERS` 中接入该族的 runner。
+绝不伪造。`server.py --stub` 返回预设输出，用于在没有硬件的情况下接线/测试 client。通用的 `/api/run`
+执行器只是一层便捷外壳，不能替代 notebook 的流水线逻辑。
 
 ---
 
-## Lifecycle & parameters
+## 生命周期 & 参数
 
-| Param | Meaning |
+| 参数 | 含义 |
 | --- | --- |
-| `--slug a[,b,c]` | one or more notebook slugs (comma = compose in order) |
-| `--goal "…"` | free-form goal → matched to slug(s) via the repo index |
-| `--device / --precision` | override the per-role defaults |
-| `--serve [--port N]` | build+optimize, then serve (default port 18790) |
-| `--china` | lock domestic mirrors |
-| `--dry-run` | resolve + plan only |
-| `--status` | venv / notebooks / last plan / **service** state (as `[SKILL_RESULT]`) |
-| `--stop` | POST `/api/shutdown` then kill pidfile + residual |
-| `--debug` | verbose diagnostics (venv, repo, devices, last log) |
+| `--slug a[,b,c]` | 一个或多个 notebook slug（逗号 = 按顺序组合） |
+| `--goal "…"` | 自由描述的目标 → 通过仓库索引匹配到 slug |
+| `--device / --precision` | 覆盖每角色默认值 |
+| `--serve [--port N]` | 构建+优化，然后部署（默认端口 18790） |
+| `--china` | 锁定国内镜像 |
+| `--dry-run` | 仅解析 + 规划 |
+| `--status` | venv / notebooks / 上次 plan / **服务**状态（以 `[SKILL_RESULT]` 输出） |
+| `--stop` | POST `/api/shutdown`，然后杀掉 pidfile + 残留进程 |
+| `--debug` | 详细诊断（venv、repo、设备、最近日志） |
 
-Exit `0` ok / `1` error. Idempotent: re-runs reuse cloned repo + existing IR (`from IR` tag).
+退出码 `0` 成功 / `1` 出错。幂等：重跑会复用已克隆的仓库 + 已有 IR（标 `from IR`）。
 
-## Troubleshooting (brief)
-- **repo-required / goal-unresolved** → let `--serve`/build clone the repo first; refine `--goal` or pass `--slug`.
-- **no static model ids found** → the notebook fetches models dynamically; supply the stage model(s) explicitly or run the notebook once.
-- **/api/run 501** → wire that family's runner in `server.py::PIPELINE_RUNNERS` (by design).
-- **service not healthy** → `run.ps1 --debug`; check port, venv deps, last log under `%USERPROFILE%\.openvino\log\`.
+## 排错（简要）
+- **repo-required / goal-unresolved** → 让 `--serve`/构建先克隆仓库；细化 `--goal` 或传 `--slug`。
+- **no static model ids found** → 该 notebook 动态获取模型；显式提供该阶段的模型，或先跑一次 notebook。
+- **/api/run 501** → 在 `server.py::PIPELINE_RUNNERS` 中接入该族的 runner（设计如此）。
+- **service not healthy** → `run.ps1 --debug`；检查端口、venv 依赖、`%USERPROFILE%\.openvino\log\` 下的最近日志。
 
-## Does / does not
-- **Does:** give a direction + conventions for repo-based pipelines; discover stages from notebooks; suggest per-stage device/precision; benchmark; provide the `[SKILL_RESULT]` + client/server *pattern*; multi-notebook compose; offline/`--china`.
-- **Does not:** ship a ready-made pipeline; force the bundled scripts as the execution path; invent model architectures; hardcode model IDs or a Python/OpenVINO version; override the notebook's conversion/inference; cloud/non-Intel; fake outputs for unwired families.
+## 做什么 / 不做什么
+- **做：** 为基于仓库的流水线提供方向 + 约定；从 notebook 发现各阶段；建议每阶段设备/精度；基准测试；提供 `[SKILL_RESULT]` + client/server *模式*；多 notebook 组合；离线/`--china`。
+- **不做：** 交付现成的流水线；强制把随附脚本作为执行路径；臆造模型架构；硬编码 model ID 或 Python/OpenVINO 版本；覆盖 notebook 的转换/推理；云端/非 Intel；为未接入的族伪造输出。
 
-## Testing
-Run the offline smoke test (no models, no clone, no Intel hardware needed) to validate the
-orchestration — resolve → optimize `--dry-run` → bench `--dry-run` → client `--help` → `--status`:
+## 测试
+运行离线冒烟测试（无需模型、无需克隆、无需 Intel 硬件）来验证编排 ——
+resolve → optimize `--dry-run` → bench `--dry-run` → client `--help` → `--status`：
 ```powershell
 powershell -ExecutionPolicy Bypass -File test_pipeline.ps1
 ```
-Exit code `0` = all checks passed. It builds a tiny synthetic notebooks repo in a temp dir and
-asserts the discovered stages, plan file, and `[SKILL_RESULT]` blocks.
+退出码 `0` = 所有检查通过。它会在临时目录里构建一个极小的合成 notebooks 仓库，并断言发现的各阶段、
+plan 文件和 `[SKILL_RESULT]` 块。
