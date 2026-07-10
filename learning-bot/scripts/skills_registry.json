@@ -109,19 +109,37 @@
       "key": "openvino-environment-management",
       "alias": "ENV",
       "when": "用户需要在 Intel AIPC 上搭建 / 配置 OpenVINO 开发环境",
-      "keywords": ["配置环境", "安装环境", "搭环境", "环境搭建", "装 openvino", "配好环境", "开发环境", "setup environment", "install openvino", "配置 python"]
+      "keywords": [
+        "配置环境", "安装环境", "搭环境", "环境搭建", "装 openvino", "配好环境", "开发环境",
+        "配好", "配置", "搭建", "装", "安装", "一次",
+        "openvino 环境", "openvino environment",
+        "intel 笔记本", "intel notebook", "intel 电脑", "intel pc",
+        "环境", "environment", "setup environment", "install openvino", "配置 python",
+        "precheck", "环境检查", "环境配置", "配环境", "装环境"
+      ]
     },
     {
       "key": "openvino-content-fetch",
       "alias": "FETCH",
       "when": "用户想找 notebook / 教程 / 示例 / 文章，或搜索 / 下载模型与预转换 IR",
-      "keywords": ["notebook", "教程", "示例", "下载模型", "找模型", "推荐", "学习路径", "文章", "modelscope", "csdn", "tutorial", "sample", "download model", " ir ", "预转换", "learning path"]
+      "keywords": [
+        "notebook", "教程", "示例", "下载模型", "找模型", "下载一个", "下载某",
+        "推荐", "学习路径", "文章", "modelscope", "csdn", "tutorial", "sample",
+        "download model", " ir ", "预转换", "learning path",
+        "下载权重", "下载参数", "下载ir", "取模型", "拉模型",
+        "图像分割", "目标检测", "asr 模型", "whisper 模型", "llm 模型", "openVINO 模型"
+      ]
     },
     {
       "key": "openvino-pipeline-optimization",
       "alias": "PIPE",
       "when": "用户想把多个模型组装成流水线、优化设备/精度、做基准测试或部署为服务",
-      "keywords": ["流水线", "pipeline", "组装", "串联", "部署服务", "serve", "基准测试", "benchmark", "优化", "加速", "多模型", "端到端", "quantize", "量化"]
+      "keywords": [
+        "流水线", "pipeline", "组装", "串联", "部署服务", "serve", "部署成服务",
+        "基准测试", "benchmark", "找瓶颈", "bottleneck",
+        "优化", "加速", "多模型", "端到端", "quantize", "量化",
+        "whisper", "asr→llm", "asr→tts", "asr llm tts", "rag", "vlm"
+      ]
     }
   ]
 }
