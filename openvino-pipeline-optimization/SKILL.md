@@ -5,10 +5,12 @@ description: |
   Intel AIPC, grounded in the openvino_notebooks repo (github.com/openvinotoolkit/openvino_notebooks).
   Given one or more notebook slugs (e.g. whisper-asr-genai, llm-rag-langchain, vlm-chatbot,
   openvoice2-and-melotts) OR a free-form goal (e.g. "local ASR -> LLM -> TTS"), it DISCOVERS the
-  pipeline stages from the notebooks themselves, gives a per-stage optimization plan (device
+  pipeline stages from the notebooks themselves, suggests a per-stage optimization plan (device
   NPU/GPU/CPU + precision INT4/INT8 via NNCF), benchmarks end-to-end + per-stage, and provides a
-  client+server template to deploy the demo as a local service. It is a runnable starting point and a
-  set of conventions — not a turnkey auto-builder; unwired pipeline families return 501, never fake output.
+  client+server template to deploy the demo as a local service. It is a direction + a set of
+  conventions — NOT a turnkey auto-builder. The bundled scripts are REFERENCE implementations, not a
+  mandatory path: model conversion and inference must follow the chosen notebook's own code, not a
+  generic script. Unwired pipeline families return 501, never fake output.
   Use when a developer wants to build/scaffold a demo, compose/chain multiple models into one pipeline,
   place stages on devices, tune precision, benchmark, or serve a pipeline (client+server). Trigger on:
   build a demo / scaffold a pipeline / multi-model pipeline / chain models / ASR->LLM->TTS / RAG /
@@ -19,19 +21,34 @@ description: |
 
 # OpenVINO Pipeline Optimization — developer scaffold & reference standard
 
-This skill gives a developer a **runnable starting point and a set of conventions** for building a
-multi-model OpenVINO pipeline demo on Intel AIPC. It is not a turnkey builder — it scaffolds the
-pipeline (discovering stages from `openvino_notebooks`), proposes an optimization plan, benchmarks it,
-and hands over a **client + server** template to serve it. The developer fills in stage-specific logic
-where needed; the skill supplies structure, defaults, and honest reporting.
+This skill gives a developer a **direction and a set of conventions** for building a multi-model
+OpenVINO pipeline demo on Intel AIPC — not a ready-made pipeline. It shows *how* to discover stages
+from `openvino_notebooks`, *how* to place them on devices/precisions, *how* to benchmark, and *how*
+to wrap them behind a **client + server**. The actual pipeline is assembled from the notebook(s) the
+user chooses; the developer fills in stage-specific logic. The skill supplies structure, suggested
+defaults, and honest reporting — never a canned pipeline.
 
-The spine, end to end:
+The spine (a suggested path, trim/replace to fit the notebook):
 
 **pick notebook(s) → discover & compose stages → optimize (device + precision) → benchmark → serve (client+server)**
 
+### What is fixed vs. what you build
+
+| Fixed (the conventions this skill standardizes) | You build (from the chosen notebook) |
+| --- | --- |
+| Directory layout, `[SKILL_RESULT]` contract, lifecycle flags | The stage graph and how stages connect |
+| The client+server *pattern* (endpoints, health, 501 honesty) | Each stage's model load / conversion / inference code |
+| Suggested device/precision heuristics (overridable) | The authoritative conversion + inference — copied/adapted from the notebook |
+
+> **Scripts are reference, not law.** Everything under `scripts/` (`resolve_pipeline.py`,
+> `optimize.py`, `bench.py`, `server.py`, `client.py`) is a **reference implementation** of these
+> conventions. Use them as a starting point and adapt freely. Where a script's generic behaviour
+> (e.g. a one-size `optimum-cli export openvino`) disagrees with the notebook, **the notebook wins** —
+> its model loading, conversion, and inference are the source of truth.
+
 > **Generic by design.** No model IDs are hardcoded — stages are discovered from the chosen notebooks.
-> No model-family switch — IR export is task-agnostic (`optimum-cli export openvino`). A pipeline
-> family without a wired runner returns HTTP 501; the skill never fabricates output.
+> No model-family switch. A pipeline family without a wired runner returns HTTP 501; the skill never
+> fabricates output.
 
 ---
 
@@ -39,19 +56,25 @@ The spine, end to end:
 
 | Need | Detail |
 | --- | --- |
-| Intel AIPC (LNL/ARL/PTL/WCL), Python 3.11, git | verify before running |
+| Intel AIPC (LNL/ARL/PTL/WCL), git | verify before running |
+| Python 3.x | **no hard pin** — use a version the chosen notebook supports (its `requirements.txt` decides). The venv is created with whatever `python` resolves to |
 | `--china` | pip=tuna, HF=hf-mirror, notebooks=gitcode; no network probing |
 | Persisted dirs (outside sandbox) | `%USERPROFILE%\.openvino\`: `venv-pipeopt\`, `openvino_notebooks\`, `ir\<slug>\`, `log\` |
 
-Deps install into the persisted venv on first run: a **minimal core** the skill's own scripts need
-(`openvino, openvino-genai, openvino-tokenizers, nncf, optimum-intel, fastapi, uvicorn, pydantic,
-nbformat, numpy`) **plus each selected notebook's own `requirements.txt`** (`notebooks/<slug>/requirements.txt`),
-so model-specific deps always match the chosen notebook. There is no static skill-level requirements
-file — dependencies are resolved from the notebook(s) you build.
+Deps install into the persisted venv on first run: a **minimal core** the reference scripts need
+(`openvino, nncf, optimum-intel, fastapi, uvicorn, pydantic, nbformat, numpy` — plus
+`openvino-genai`/`openvino-tokenizers` only when a stage uses them) **plus each selected notebook's
+own `requirements.txt`** (`notebooks/<slug>/requirements.txt`), so model-specific deps always match
+the chosen notebook. There is no static skill-level requirements file, and no forced version pins —
+dependencies are resolved from the notebook(s) you build. If a notebook pins its own OpenVINO/Python
+version, follow the notebook.
 
 ---
 
-## Build & optimize
+## Build & optimize (reference flow)
+
+The commands below drive the **reference** scripts. They are a convenient starting point; for real
+conversion/inference, prefer the steps in the chosen notebook and adapt the scripts to match.
 
 ```powershell
 # single notebook
@@ -65,10 +88,18 @@ run.ps1 --dry-run --slug vlm-chatbot
 ```
 
 Flow: **resolve** (`resolve_pipeline.py` — discover stages from `notebooks/<slug>/`) →
-**optimize** (`optimize.py` — per-stage `optimum-cli export openvino` + NNCF precision + device →
-`pipeline-plan.json`) → **benchmark** (`bench.py` — per-stage + e2e, bottleneck, `[SKILL_RESULT]`).
+**optimize** (`optimize.py` — a reference exporter that calls `optimum-cli export openvino` + NNCF +
+device → `pipeline-plan.json`) → **benchmark** (`bench.py` — per-stage + e2e, bottleneck,
+`[SKILL_RESULT]`).
 
-Default per-role policy (overridable via `--device` / `--precision`): LLM→GPU/INT4,
+> The reference `optimize.py` uses a single generic `optimum-cli export openvino`. This works for many
+> standard models but is **not authoritative**: if the notebook converts a model a specific way
+> (custom export args, `ov.convert_model`, manual NNCF config, stateful/GenAI export, multiple
+> sub-models), replace the export call with the notebook's own conversion. Same for inference — the
+> notebook's runtime code is the reference, not `server.py`'s generic executor.
+
+**Suggested** per-role device/precision heuristics (defaults only, always overridable via
+`--device` / `--precision`, and superseded by whatever the notebook does): LLM→GPU/INT4,
 encoder→GPU/INT8, retriever→CPU/INT8, pre/post→CPU/FP16.
 
 ### `[SKILL_RESULT]` (build/benchmark contract)
@@ -121,8 +152,10 @@ curl http://127.0.0.1:18790/api/health
 ```
 
 **Honesty:** a pipeline family with no wired runner returns **HTTP 501** ("runner for family 'X' not
-implemented yet") — the developer wires that family's runner in `server.py::PIPELINE_RUNNERS`. Nothing
-is faked. `server.py --stub` returns canned outputs for wiring/testing the client without hardware.
+implemented yet") — the developer wires that family's runner in `server.py::PIPELINE_RUNNERS` using
+the **notebook's own inference code**. Nothing is faked. `server.py --stub` returns canned outputs for
+wiring/testing the client without hardware. The generic `/api/run` executor is a convenience shell,
+not a substitute for the notebook's pipeline logic.
 
 ---
 
@@ -149,8 +182,8 @@ Exit `0` ok / `1` error. Idempotent: re-runs reuse cloned repo + existing IR (`f
 - **service not healthy** → `run.ps1 --debug`; check port, venv deps, last log under `%USERPROFILE%\.openvino\log\`.
 
 ## Does / does not
-- **Does:** scaffold + benchmark + serve repo-based pipelines; per-stage device/precision; multi-notebook compose; offline/`--china`; provide the `[SKILL_RESULT]` + client/server conventions.
-- **Does not:** invent model architectures; hardcode model IDs; cloud/non-Intel; fake outputs for unwired families.
+- **Does:** give a direction + conventions for repo-based pipelines; discover stages from notebooks; suggest per-stage device/precision; benchmark; provide the `[SKILL_RESULT]` + client/server *pattern*; multi-notebook compose; offline/`--china`.
+- **Does not:** ship a ready-made pipeline; force the bundled scripts as the execution path; invent model architectures; hardcode model IDs or a Python/OpenVINO version; override the notebook's conversion/inference; cloud/non-Intel; fake outputs for unwired families.
 
 ## Testing
 Run the offline smoke test (no models, no clone, no Intel hardware needed) to validate the

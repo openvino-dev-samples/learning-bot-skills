@@ -1,6 +1,6 @@
 {
   "venv_name": "venv-pipeopt",
-  "python_version": "3.11",
+  "python_version": "3.x (match the chosen notebook; no hard pin)",
   "mem_need_gb": 8.0,
   "server_alive_timeout": 600,
   "notebooks_repo": {

@@ -1,7 +1,7 @@
 {
   "display_name": "OpenVINO Pipeline Optimization",
   "display_description": "A developer scaffold + reference standard for building multi-model OpenVINO pipeline demos (Intel AIPC only)",
-  "detail_describe": "A developer-facing scaffold and reference standard. Grounded in the openvino_notebooks repo, it resolves one or more notebooks (or a free-form goal) into a multi-model pipeline skeleton: discover stages, assign per-role device (NPU/GPU/CPU) and precision (INT4/INT8 via NNCF), benchmark end-to-end + per-stage, and provide a client+server template to deploy the demo as a local service. It gives a runnable starting point and shared conventions ([SKILL_RESULT] contract, lifecycle, directory layout); developers build their own pipeline demo on top. Unwired pipeline families return HTTP 501 instead of faking output. Runs locally, offline / China-mirror aware.",
+  "detail_describe": "A developer-facing direction + reference standard (NOT a ready-made pipeline). Grounded in the openvino_notebooks repo, it resolves one or more notebooks (or a free-form goal) into a multi-model pipeline skeleton: discover stages, suggest per-role device (NPU/GPU/CPU) and precision (INT4/INT8 via NNCF), benchmark end-to-end + per-stage, and provide a client+server template to deploy the demo as a local service. The bundled scripts are reference implementations, not a mandatory path — model conversion and inference follow the chosen notebook's own code. It supplies shared conventions ([SKILL_RESULT] contract, lifecycle, directory layout); developers build their own pipeline demo on top. No hardcoded model IDs or Python/OpenVINO version pin. Unwired pipeline families return HTTP 501 instead of faking output. Runs locally, offline / China-mirror aware.",
   "name": "openvino-pipeline-optimization",
   "icon": "",
   "use_cases": [
@@ -11,5 +11,5 @@
     "Deploy the pipeline demo as a local service (client + server)"
   ],
   "author": "Intel AIPC Skills",
-  "version": "1.1.0"
+  "version": "1.2.0"
 }
