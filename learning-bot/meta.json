@@ -1,0 +1,15 @@
+{
+  "display_name": "Learning Bot 启动器",
+  "display_description": "Learning Bot 的入口 skill：向用户推荐一组预设问题，每条对应一个在 Intel AIPC 上本地运行的 aipc-skill（ASR/TTS/实时翻译/OCR/文档解析/文生图/图生图/文生视频/超分/目标检测/截图问答/电脑自动化/显存查看）；命中预设则下载并调用对应 skill，超出预设范围则路由到 ENV/FETCH/PIPE 三个开发类 skill。",
+  "detail_describe": "调用本技能即开启 Learning Bot：推荐 14 条预设问题给用户，并对用户请求做路由——命中预设本地能力则下载并调用对应的 aipc-skill（来自 makejiang/aipc-skills 1.0.6 release），超出预设范围则根据实际需求转交给三个开发类 skill（openvino-environment-management / openvino-content-fetch / openvino-pipeline-optimization），无法归类则先向用户追问。全部本地离线运行，仅限 Intel AIPC (Windows)。",
+  "name": "learning-bot",
+  "icon": "",
+  "use_cases": [
+    "启动 Learning Bot 并向用户推荐可用的本地能力（预设问题）",
+    "把用户请求路由到对应的本地 aipc-skill（语音/图像/文档/自动化等）",
+    "当需求超出预设本地能力时，路由到 ENV/FETCH/PIPE 开发类 skill",
+    "下载并在本地安装某个预设 aipc-skill"
+  ],
+  "author": "Intel AIPC Skills",
+  "version": "1.0.0"
+}

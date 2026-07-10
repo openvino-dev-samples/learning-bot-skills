@@ -1,0 +1,21 @@
+{
+  "venv_name": "system-python",
+  "python_version": "3.x (stdlib only; menu/route are offline, only -Install touches the network)",
+  "mem_need_gb": 1.0,
+  "entry_script": "scripts/run.ps1",
+  "registry": "scripts/skills_registry.json",
+  "preset_release": {
+    "repo": "makejiang/aipc-skills",
+    "version": "1.0.6",
+    "base_url": "https://github.com/makejiang/aipc-skills/releases/download/1.0.6/",
+    "count": 14
+  },
+  "dev_skills": [
+    "openvino-environment-management",
+    "openvino-content-fetch",
+    "openvino-pipeline-optimization"
+  ],
+  "network_endpoints": [
+    "https://github.com/makejiang/aipc-skills/releases/download/1.0.6/"
+  ]
+}

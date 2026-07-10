@@ -1,0 +1,127 @@
+{
+  "release": {
+    "repo": "makejiang/aipc-skills",
+    "version": "1.0.6",
+    "base_url": "https://github.com/makejiang/aipc-skills/releases/download/1.0.6/"
+  },
+  "preset_skills": [
+    {
+      "key": "asr",
+      "name_cn": "本地语音识别 (ASR)",
+      "question": "帮我把这段录音/语音转成文字。",
+      "zip": "skill-local-asr-1.0.6-20260628-001408.zip",
+      "keywords": ["语音转文字", "语音识别", "转录", "转成文字", "听写", "录音转文字", "把这段音频", "speech to text", "asr", "transcribe"]
+    },
+    {
+      "key": "tts",
+      "name_cn": "本地语音合成 (TTS)",
+      "question": "把这段文字读出来，生成一段语音。",
+      "zip": "skill-local-tts-1.0.6-20260628-001418.zip",
+      "keywords": ["文字转语音", "朗读", "读出来", "念出来", "语音合成", "生成语音", "配音", "tts", "text to speech"]
+    },
+    {
+      "key": "realtime-translator",
+      "name_cn": "本地实时翻译",
+      "question": "帮我实时翻译这段对话/语音。",
+      "zip": "skill-local-realtime-translator-1.0.6-20260628-001416.zip",
+      "keywords": ["实时翻译", "同声传译", "同传", "边说边译", "实时口译", "会议翻译", "realtime translate", "live translation"]
+    },
+    {
+      "key": "ocr-npu",
+      "name_cn": "本地 OCR (NPU)",
+      "question": "用 NPU 识别这张图片里的文字。",
+      "zip": "skill-local-ocr-npu-1.0.6-20260628-001412.zip",
+      "keywords": ["ocr", "识别文字", "文字识别", "图片文字", "图片里的文字", "图里的文字", "提取文字", "提取图片文字", "识别图片", "扫描文字", "npu ocr", "text recognition"]
+    },
+    {
+      "key": "ocr-gpu",
+      "name_cn": "本地 OCR (GPU)",
+      "question": "用 GPU 识别这张图/文档里的文字。",
+      "zip": "skill-local-ocr-gpu-1.0.6-20260628-001411.zip",
+      "keywords": ["gpu ocr", "gpu 识别文字", "用 gpu 提取文字"]
+    },
+    {
+      "key": "mineru",
+      "name_cn": "本地文档解析 (MinerU)",
+      "question": "帮我解析这个 PDF，转成 Markdown / 结构化文本。",
+      "zip": "skill-local-mineru-1.0.6-20260628-001411.zip",
+      "keywords": ["pdf", "文档解析", "解析文档", "转markdown", "转 markdown", "文档转", "mineru", "扫描件", "论文解析", "版面分析", "parse document"]
+    },
+    {
+      "key": "txt2img",
+      "name_cn": "本地文生图 (Text-to-Image)",
+      "question": "根据这段描述生成一张图片。",
+      "zip": "skill-local-txt2img-1.0.6-20260628-001419.zip",
+      "keywords": ["文生图", "生成图片", "生成一张图", "画一张", "根据描述生成图", "text to image", "txt2img", "生成图像", "作画"]
+    },
+    {
+      "key": "img2img",
+      "name_cn": "本地图生图 (Image-to-Image)",
+      "question": "把这张图改成某种风格 / 基于这张图生成新图。",
+      "zip": "skill-local-img2img-1.0.6-20260628-001410.zip",
+      "keywords": ["图生图", "风格转换", "改图", "基于这张图", "图片编辑", "重绘", "img2img", "image to image"]
+    },
+    {
+      "key": "txt2video",
+      "name_cn": "本地文生视频 (Text-to-Video)",
+      "question": "根据这段描述生成一段视频。",
+      "zip": "skill-local-txt2video-1.0.6-20260628-001420.zip",
+      "keywords": ["文生视频", "生成视频", "生成一段视频", "text to video", "txt2video", "视频生成"]
+    },
+    {
+      "key": "sr",
+      "name_cn": "本地超分辨率 (Super-Resolution)",
+      "question": "把这张模糊 / 低清的图片变清晰、放大。",
+      "zip": "skill-local-sr-1.0.6-20260628-001418.zip",
+      "keywords": ["超分", "超分辨率", "放大图片", "变清晰", "高清化", "画质增强", "super resolution", "upscale"]
+    },
+    {
+      "key": "yolo26",
+      "name_cn": "本地目标检测 (YOLO26)",
+      "question": "帮我检测这张图片里有哪些物体。",
+      "zip": "skill-local-yolo26-1.0.6-20260628-001421.zip",
+      "keywords": ["目标检测", "物体检测", "检测物体", "识别物体", "检测", "物体", "哪些物体", "框出", "yolo", "detect objects", "object detection"]
+    },
+    {
+      "key": "screenshot-qa",
+      "name_cn": "本地截图问答",
+      "question": "帮我截个屏，然后回答关于屏幕内容的问题。",
+      "zip": "skill-local-screenshot-qa-1.0.6-20260628-001417.zip",
+      "keywords": ["截图问答", "截屏", "屏幕问答", "截个屏", "屏幕内容", "看屏幕回答", "screenshot", "screen qa"]
+    },
+    {
+      "key": "computer-use",
+      "name_cn": "本地电脑自动化 (Computer Use)",
+      "question": "帮我自动操作电脑完成某个任务。",
+      "zip": "skill-local-computer-use-1.0.6-20260628-001409.zip",
+      "keywords": ["电脑自动化", "自动操作", "操作电脑", "帮我点", "自动完成", "代操作", "自动化任务", "computer use", "gui automation"]
+    },
+    {
+      "key": "vram",
+      "name_cn": "本地显存查看 (VRAM)",
+      "question": "看看我现在的显存 / VRAM 占用情况。",
+      "zip": "skill-local-vram-1.0.6-20260628-001421.zip",
+      "keywords": ["显存", "vram", "显存占用", "gpu 内存", "显卡内存", "显存查看", "gpu memory"]
+    }
+  ],
+  "dev_skills": [
+    {
+      "key": "openvino-environment-management",
+      "alias": "ENV",
+      "when": "用户需要在 Intel AIPC 上搭建 / 配置 OpenVINO 开发环境",
+      "keywords": ["配置环境", "安装环境", "搭环境", "环境搭建", "装 openvino", "配好环境", "开发环境", "setup environment", "install openvino", "配置 python"]
+    },
+    {
+      "key": "openvino-content-fetch",
+      "alias": "FETCH",
+      "when": "用户想找 notebook / 教程 / 示例 / 文章，或搜索 / 下载模型与预转换 IR",
+      "keywords": ["notebook", "教程", "示例", "下载模型", "找模型", "推荐", "学习路径", "文章", "modelscope", "csdn", "tutorial", "sample", "download model", " ir ", "预转换", "learning path"]
+    },
+    {
+      "key": "openvino-pipeline-optimization",
+      "alias": "PIPE",
+      "when": "用户想把多个模型组装成流水线、优化设备/精度、做基准测试或部署为服务",
+      "keywords": ["流水线", "pipeline", "组装", "串联", "部署服务", "serve", "基准测试", "benchmark", "优化", "加速", "多模型", "端到端", "quantize", "量化"]
+    }
+  ]
+}
