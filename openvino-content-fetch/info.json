@@ -8,6 +8,8 @@
     "china_mirror": "https://gitcode.com/openvinotoolkit/openvino_notebooks"
   },
   "sources": {
+    "openvino_notebooks_navigation": "https://openvinotoolkit.github.io/openvino_notebooks/",
+    "openvino_notebooks_metadata": "https://openvinotoolkit.github.io/openvino_notebooks/notebooks-metadata-map.json",
     "modelscope": "https://modelscope.cn/brand/view/AI_PC",
     "csdn": "https://inteldevzone.blog.csdn.net/?type=lately"
   },

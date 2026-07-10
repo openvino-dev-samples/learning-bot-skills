@@ -39,9 +39,17 @@ Check "py_compile fetch_content.py" { & $Py -m py_compile $Fetch; $LASTEXITCODE 
 Check "--help exit 0"               { $LASTEXITCODE -eq 0 }
 
 Write-Host ""
+Write-Host "1b. Navigation metadata parsing and filtering" -ForegroundColor White
+& $Py -m unittest discover -s $ScriptDir -p "test_fetch_content.py" | Out-Host
+Check "selector metadata unit tests" { $LASTEXITCODE -eq 0 }
+
+Write-Host ""
 Write-Host "2. Content fetch emits a valid [SKILL_RESULT] (live or seeded fallback)" -ForegroundColor White
 foreach ($src in @("github","modelscope","csdn")) {
-  $out = & $Py $Fetch --source $src 2>&1 | Out-String
+  # Keep the rich navigation JSON small enough for reliable PowerShell capture.
+  $fetchArgs = @($Fetch, "--source", $src)
+  if ($src -eq "github") { $fetchArgs += @("--limit", "5") }
+  $out = & $Py @fetchArgs 2>&1 | Out-String
   Check "source=$src SKILL_RESULT block" { $out -match "\[SKILL_RESULT\]" -and $out -match "\[/SKILL_RESULT\]" }
   Check "source=$src status=ok"          { $out -match "status=ok" }
   Check "source=$src count>0"            { ($out -match "count=(\d+)") -and ([int]$Matches[1] -gt 0) }

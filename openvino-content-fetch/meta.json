@@ -1,15 +1,16 @@
 {
   "display_name": "OpenVINO 内容抓取",
-  "display_description": "从 OpenVINO GitHub、ModelScope AI PC Zone 和 CSDN Intel 开发者专区抓取并解析 notebook、示例代码、模型和文章；并从 ModelScope 和 Intel OpenVINO Model Hub 定位/下载模型及预转换的 OpenVINO IR。",
-  "detail_describe": "一个从多个在线来源（OpenVINO GitHub、ModelScope、CSDN）抓取、解析并结构化内容的技能，用于学习者推荐和 bot 训练，同时可解析并下载模型 / 预转换的 OpenVINO IR，用于在 Intel AIPC 上进行本地推理。本地运行，支持离线回退和国内镜像。",
+  "display_description": "按 AI Task 或 Category 搜索官方 OpenVINO Notebooks 导航索引，抓取 OpenVINO 学习内容，并定位或下载 OpenVINO 模型及 IR。",
+  "detail_describe": "搜索 OpenVINO Notebooks 官方导航元数据，并从 OpenVINO GitHub、ModelScope 和 CSDN 抓取、解析及结构化学习内容，用于学习者推荐。同时可解析和下载模型或预转换的 OpenVINO IR，用于 Intel AIPC 本地推理，并支持离线回退和国内镜像。",
   "name": "openvino-content-fetch",
   "icon": "",
   "use_cases": [
     "抓取并解析 OpenVINO notebook 用于学习者推荐",
+    "按官方 Category 和 Text-to-Image 等 AI Task 搜索 notebook",
     "收集 ModelScope AI PC Zone 的更新、技能和模型",
     "获取 CSDN Intel 开发者专区文章作为学习内容",
-    "定位并下载模型 / 预转换的 OpenVINO IR 用于本地推理"
+    "定位并下载模型或预转换的 OpenVINO IR 用于本地推理"
   ],
   "author": "Zhuo",
-  "version": "1.1.0"
+  "version": "1.2.0"
 }
