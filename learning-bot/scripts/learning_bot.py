@@ -99,6 +99,19 @@ def _has_dev_phrase(t):
 def route(reg, text):
     t = (text or "").lower()
 
+    # Hardware boundary: only Intel AIPC (Windows) is supported locally. If the user
+    # explicitly names an unsupported host (Apple Silicon / macOS / discrete NVIDIA /
+    # Linux desktop), return clarify BEFORE any preset/dev routing so the agent is
+    # forced to confirm hardware rather than silently mapping it to a preset skill.
+    non_intel_markers = (
+        "m3 macbook", "m3 mac", "m2 macbook", "m2 mac", "m1 macbook", "m1 mac",
+        "m4 macbook", "m4 mac", "macbook", "macos", "mac os", "apple silicon",
+        "apple m1", "apple m2", "apple m3", "apple m4",
+    )
+    if any(m in t for m in non_intel_markers):
+        return {"scope": "clarify", "target": "", "matched": "false",
+                "reason": "仅支持 Intel AIPC (Windows)；当前输入提到非 Intel 硬件，请确认硬件平台"}
+
     # Score every preset skill by keyword hits.
     preset_hits = []
     for s in reg["preset_skills"]:
