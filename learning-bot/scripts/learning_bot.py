@@ -67,8 +67,50 @@ def _score(text, keywords):
     return sum(1 for kw in keywords if kw.strip() and kw.strip().lower() in text)
 
 
+def _has_download_intent(t):
+    """强下载模型意图：'下载/拉/取' + '模型/权重/参数/IR'，中间允许插入 ≤4 个字符。
+    解决 '下载一个 ASR 模型' 这类连字串匹配会漏掉的情况。"""
+    triggers = ("下载", "拉取", "拉一个", "取一个", "get ", "fetch ", "download", "pull ")
+    targets  = ("模型", "权重", "参数", " ir ", "(ir)", "openVINO ir")
+    if not any(trig in t for trig in triggers):
+        return False
+    return any(tgt in t for tgt in targets)
+
+
+def _has_out_of_scope_signal(t):
+    """强越界信号：云端/不要本地/批量安装/造假 —— 这些都需要先让 agent 解释边界，
+    路由层把它们引到 dev skill（由 agent 在 dev 阶段决定如何拒绝 / 收窄）。"""
+    return any(w in t for w in (
+        "云端", "云上", "调云", "api 做", "api进行", "用api", "用 api",
+        "在线推理", "远程推理", "调用openai", "调 openai", "调chatgpt",
+        "不用真跑", "直接告诉", "直接给", "伪造", "造假",
+        "一次性全", "一次全", "批量安装", "全部安装", "全装", "把 14", "把14",
+    ))
+
+
+def _has_dev_phrase(t):
+    """强开发意图短语：'下载模型'/'搭环境' 这类连字串必须出现。"""
+    return any(w in t for w in ("下载模型", "找模型", "download model",
+                                "搭环境", "配置环境", "安装环境", "配好环境",
+                                "部署", "流水线", "pipeline", "基准测试", "benchmark",
+                                "notebook", "教程", "学习路径"))
+
+
 def route(reg, text):
     t = (text or "").lower()
+
+    # Hardware boundary: only Intel AIPC (Windows) is supported locally. If the user
+    # explicitly names an unsupported host (Apple Silicon / macOS / discrete NVIDIA /
+    # Linux desktop), return clarify BEFORE any preset/dev routing so the agent is
+    # forced to confirm hardware rather than silently mapping it to a preset skill.
+    non_intel_markers = (
+        "m3 macbook", "m3 mac", "m2 macbook", "m2 mac", "m1 macbook", "m1 mac",
+        "m4 macbook", "m4 mac", "macbook", "macos", "mac os", "apple silicon",
+        "apple m1", "apple m2", "apple m3", "apple m4",
+    )
+    if any(m in t for m in non_intel_markers):
+        return {"scope": "clarify", "target": "", "matched": "false",
+                "reason": "仅支持 Intel AIPC (Windows)；当前输入提到非 Intel 硬件，请确认硬件平台"}
 
     # Score every preset skill by keyword hits.
     preset_hits = []
@@ -95,10 +137,15 @@ def route(reg, text):
     dev_hits.sort(reverse=True)
 
     # Strong development-intent words steer to dev skills even if a modality word appears
-    # (e.g. "下载 ASR 模型" is a FETCH job, not the ASR skill).
-    dev_override = any(w in t for w in ("下载模型", "找模型", "download model", "部署", "流水线",
-                                        "pipeline", "基准测试", "benchmark", "搭环境", "配置环境",
-                                        "安装环境", "notebook", "教程", "学习路径"))
+    # (e.g. "下载 ASR 模型" is a FETCH job, not the ASR skill). Layered check:
+    #   1) 连字串开发短语（高置信度）
+    #   2) '下载/拉' + '模型/IR' 模式（修复 "下载一个 ASR 模型" 漏召回）
+    #   3) 越界信号（云端/批量安装/造假等）—— 也优先 dev，让 agent 在 dev 阶段解释边界
+    dev_override = (
+        _has_dev_phrase(t)
+        or _has_download_intent(t)
+        or _has_out_of_scope_signal(t)
+    )
 
     if preset_hits and not dev_override:
         best = normalize_ocr(preset_hits[0][1])
@@ -108,6 +155,17 @@ def route(reg, text):
     if dev_hits:
         return {"scope": "dev", "target": dev_hits[0][1], "matched": "true",
                 "reason": "超出预设本地能力，匹配到开发类 skill"}
+
+    # dev_override 命中但 dev 关键词未命中：路由到最贴近的 dev skill（由 agent 解释边界）
+    if dev_override:
+        # 默认目标 = ENV（搭环境/装东西/解释硬件边界最常用），但下载模型类信号优先 FETCH
+        if _has_download_intent(t):
+            target = "openvino-content-fetch"
+            reason = "检测到「下载/拉取 模型」强开发意图 → 路由到 FETCH"
+        else:
+            target = "openvino-environment-management"
+            reason = "检测到越界/批处理/造假等强信号 → 路由到 ENV 由 agent 解释边界"
+        return {"scope": "dev", "target": target, "matched": "true", "reason": reason}
 
     if preset_hits:
         best = normalize_ocr(preset_hits[0][1])
