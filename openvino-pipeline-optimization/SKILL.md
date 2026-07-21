@@ -14,6 +14,10 @@ description: |
   pipeline / multi-model pipeline / chain models / ASR->LLM->TTS / RAG / vision chatbot /
   device placement / benchmark the pipeline / deploy as a service / serve a pipeline /
   client server / reference standard。
+  构建完成后，还可把流水线**封装/打包成一个可分发的本地 AI skill**（面向 Marvis / 自定义 host，
+  固定 `run.ps1` 入口 + client-server 命名管道 + 模型下载续传 + SKILL.md 路由）。触发词：封装/打包/
+  搭建 skill / package a skill / author a skill / scaffold a local AI skill / info.json / meta.json /
+  run.ps1 / named pipe / 模型下载续传。
   需要 Intel AIPC 硬件。
 ---
 
@@ -27,7 +31,11 @@ description: |
 
 主线（一条建议路径，按 notebook 需要裁剪/替换）：
 
-**选 notebook → 发现并组合各阶段 → 优化（设备 + 精度）→ 基准测试 → 部署（client+server）**
+**选 notebook → 发现并组合各阶段 → 优化（设备 + 精度）→ 基准测试 → 部署（client+server）→ 封装为可分发的本地 AI skill（可选）**
+
+最后一步（封装）是可选的：当你想把已优化/部署好的流水线打包成一个 Host 应用（Marvis / WorkBuddy /
+自定义 host）可通过单一入口脚本调用的**本地 AI skill** 时使用。这部分约定整合自
+`local-ai-skill-authoring`，见下方 [封装为本地 AI skill](#封装为可分发的本地-ai-skill) 一节及 `references/`、`assets/`。
 
 ### 哪些是固定的 vs. 哪些由你构建
 
@@ -149,6 +157,96 @@ yet"）—— 开发者用 **notebook 自己的推理代码**在 `server.py::PIP
 
 ---
 
+## 封装为可分发的本地 AI skill
+
+> 本节整合自 [`local-ai-skill-authoring`](https://github.com/openvino-dev-samples/local-ai-skill-authoring)。
+> 上面的 client+server 是**开发/本地服务**形态（HTTP/FastAPI）。当你要把这条已构建、已优化、已验证的
+> 流水线**分发**给一个 Host 应用（Marvis / WorkBuddy / 自定义 host）时，把它打包成一个遵循固定约定的
+> **本地 AI skill**：Host 只调用一个固定入口脚本 `scripts\run.ps1`，其余都是它背后的实现细节。
+
+### 核心心智模型
+
+本地 AI skill 有**唯一固定入口** `scripts\run.ps1`，Host 调用它，其余都在它背后：
+
+```mermaid
+flowchart LR
+    Host -->|调用一次| run[run.ps1]
+    run -->|1. 检测硬件| hw[platform check]
+    run -->|2. 准备环境| env[install-env.ps1]
+    run -->|3. 调用| client[client.py]
+    client -->|命名管道| server[server.py<br/>模型常驻]
+```
+
+两种可选架构（用 [references/architecture.md](./references/architecture.md) 的表来选）：
+
+| 条件 | 架构 |
+| --- | --- |
+| 模型加载 > 10s、内存 > 1GB，或频繁调用 | **Client-Server**（推荐；多阶段流水线基本都属于此类） |
+| 模型加载 < 10s **且**很少被调用 | **Single-Client** |
+
+> 传输层区别：开发/本地服务用 **HTTP/FastAPI**（`scripts/server.py`）；面向 Marvis 式 Host 分发时用
+> **命名管道**（见 architecture.md）。两者的阶段加载与逐阶段推理逻辑一致，只是传输层不同。
+
+### 打包目录布局
+
+```
+local-<function>/
+├── SKILL.md            # 路由规范（Host 用 frontmatter 的 description 匹配意图）
+├── info.json           # 运行时配置：venv、python 版本、mem_need_gb、models（每个阶段 IR 一条）
+├── meta.json           # 商店元数据：显示名、图标、use_cases
+├── requirements.txt    # Python 依赖（须含 openvino + 模型下载器；叠加所选 notebook 的依赖）
+├── scripts/
+│   ├── run.ps1         # 固定名入口 —— 永不改名
+│   ├── client.py       # 短生命周期 CLI client
+│   ├── server.py       # （可选）常驻模型 server
+│   └── <helper>.py     # 领域辅助
+├── assets/             # （可选）静态资源
+├── wheels/             # （可选）预编译 .whl
+└── tests/
+    └── test.ps1        # 端到端测试
+```
+
+### 封装步骤
+
+1. **确认意图** —— 目标 Host（Marvis / 自定义 / 无）？Client-Server 还是 Single-Client？
+2. **搭目录** —— 从 `./assets/` 复制模板；目录改名为 `local-<function>`（如 `local-asr-llm-tts`）。
+3. **填 `info.json`** —— venv 名、python 版本、`mem_need_gb`（对流水线要**汇总所有常驻阶段**的显存/内存）、`models` 列表（**每个阶段 IR 一条**，含 `required_files`）。见 [references/file-reference.md](./references/file-reference.md)。
+4. **写 `SKILL.md`** —— 关键词丰富的中英双语 `description` 供 Host 路由。见 file-reference.md 的路由规则与 [assets/SKILL.template.md](./assets/SKILL.template.md)。
+5. **填 `meta.json`** —— display_name、use_cases、version。
+6. **实现 `client.py`（+ `server.py`）** —— 遵循[命名管道协议与状态机](./references/architecture.md)；stdout/stderr 配置 UTF-8。可直接复用本 skill `scripts/` 里已跑通的阶段加载/推理逻辑，替换传输层。
+7. **接入模型下载 + 续传** —— 原子 `.partial` 下载、`required_files` 校验、`--continue` 超时协议。见 [references/model-and-env.md](./references/model-and-env.md)。
+8. **写 `requirements.txt`** —— 含 `openvino` 和模型下载器（如 `modelscope`）；锁定关键版本；叠加所选 notebook 自己的依赖。
+9. **写 `run.ps1`** —— 硬件检测 → 装环境 → 启动 client；首行 `$ErrorActionPreference = 'Stop'`。
+10. **测试** —— 首次下载（含 `--continue`）、非 AIPC 报错路径、编码、退出码。见 [references/best-practices.md](./references/best-practices.md) 的清单。
+
+### 参考文档 & 模板
+
+| 主题 | 文档 |
+| --- | --- |
+| 架构、命名管道协议、server 状态机、进程管理器 | [references/architecture.md](./references/architecture.md) |
+| 每个文件的职责 + SKILL.md 路由规则 | [references/file-reference.md](./references/file-reference.md) |
+| 模型下载+续传协议、venv、设备选择、内存预算 | [references/model-and-env.md](./references/model-and-env.md) |
+| 退出码、日志、编码、常见坑、构建清单 | [references/best-practices.md](./references/best-practices.md) |
+
+| 模板 | 用途 |
+| --- | --- |
+| [assets/SKILL.template.md](./assets/SKILL.template.md) | 带路由 frontmatter 的 SKILL.md 骨架 |
+| [assets/info.template.json](./assets/info.template.json) | 运行时配置 |
+| [assets/meta.template.json](./assets/meta.template.json) | 商店元数据 |
+| [assets/requirements.template.txt](./assets/requirements.template.txt) | Python 依赖 |
+| [assets/run.template.ps1](./assets/run.template.ps1) | 入口脚本 |
+| [assets/client.template.py](./assets/client.template.py) | 短生命周期 client |
+| [assets/server.template.py](./assets/server.template.py) | 常驻模型 server |
+
+### Host 相关 vs 可复用
+
+可复用核心：目录布局、`run.ps1` 入口契约、client-server 拆分、命名管道协议、模型下载+续传、venv 管理、
+SKILL.md 路由约定。以下是**特定 Host（如 Marvis）的参考实现**，换 Host 时可替换/丢弃：`platform.exe
+--is-aipc` 硬件门、`server-dog` 进程/内存管理器、`~/.openvino/` 固定目录树、共享 `model_download.py`。
+换成非 Marvis 的 Host 时，保留核心、替换这些 Host 相关件即可。
+
+---
+
 ## 生命周期 & 参数
 
 | 参数 | 含义 |
@@ -172,8 +270,8 @@ yet"）—— 开发者用 **notebook 自己的推理代码**在 `server.py::PIP
 - **service not healthy** → `run.ps1 --debug`；检查端口、venv 依赖、`%USERPROFILE%\.openvino\log\` 下的最近日志。
 
 ## 做什么 / 不做什么
-- **做：** 为基于仓库的流水线提供方向 + 约定；从 notebook 发现各阶段；建议每阶段设备/精度；基准测试；提供 `[SKILL_RESULT]` + client/server *模式*；多 notebook 组合；离线/`--china`。
-- **不做：** 交付现成的流水线；强制把随附脚本作为执行路径；臆造模型架构；硬编码 model ID 或 Python/OpenVINO 版本；覆盖 notebook 的转换/推理；云端/非 Intel；为未接入的族伪造输出。
+- **做：** 为基于仓库的流水线提供方向 + 约定；从 notebook 发现各阶段；建议每阶段设备/精度；基准测试；提供 `[SKILL_RESULT]` + client/server *模式*；多 notebook 组合；离线/`--china`；把流水线封装为可分发的本地 AI skill（目录布局 + `run.ps1` 入口 + client-server 命名管道 + 模型下载续传 + 路由）。
+- **不做：** 交付现成的流水线；强制把随附脚本作为执行路径；臆想模型架构；硬编码 model ID 或 Python/OpenVINO 版本；覆盖 notebook 的转换/推理；云端/非 Intel；为未接入的族伪造输出；训练或导出/量化模型（封装时复用已有 IR）。
 
 ## 测试
 运行离线冒烟测试（无需模型、无需克隆、无需 Intel 硬件）来验证编排 ——
