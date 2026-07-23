@@ -1,0 +1,10 @@
+# Core runtime — required
+openvino>=2026.0
+numpy<2.0
+
+# Model download — required
+modelscope
+
+# Domain deps (edit for your skill)
+# soundfile
+# pillow

@@ -84,6 +84,7 @@ description: |
 | 参数 | 说明 |
 |---|---|
 | -Menu | 打印推荐给用户的预设问题（默认动作 = 启动 Learning Bot） |
+| -Questions \<type\> | 输出准备好的问题：`preset` / `preflight` / `clarify` / `all`（`[SKILL_QUESTIONS]` 契约，离线） |
 | -Route "\<text\>" | 对一句用户输入给出路由建议（preset / dev / clarify） |
 | -Install \<key\> | 下载并解压对应的 aipc-skill（key 见上表） |
 | -OutDir | -Install 的目标目录（默认 `~/.aipc-skills`） |
@@ -91,6 +92,9 @@ description: |
 ```powershell
 # 启动 Learning Bot：推荐预设问题
 run.ps1 -Menu
+
+# 输出准备好的问题（前置条件多选 / 澄清 / 全部）
+run.ps1 -Questions preflight
 
 # 对用户输入做路由（返回 preset / dev / clarify 建议）
 run.ps1 -Route "帮我把这段录音转成文字"
@@ -100,6 +104,36 @@ run.ps1 -Install asr
 ```
 
 ---
+
+## 准备好的问题（Prepared Questions）
+
+除了 `-Menu`（推荐预设问题），本技能还能输出统一契约的**准备好的问题**，供 agent 渲染成交互式清单
+（离线、无需网络）：
+
+- **preset** —— 14 条本地能力推荐（**从 [`scripts/skills_registry.json`](scripts/skills_registry.json) 单一来源生成**，与 `-Menu` 同源）。
+- **preflight** —— 前置条件多选：是否 Intel AIPC、能否直连、要本地能力还是开发。
+- **clarify** —— 追问用户想用哪一类能力（语音/图像/文档/自动化/开发）。
+
+```powershell
+run.ps1 -Questions preset      # = 菜单，但走统一 [SKILL_QUESTIONS] 契约
+run.ps1 -Questions preflight   # 前置条件多选
+run.ps1 -Questions clarify     # 澄清模态
+run.ps1 -Questions all         # 以上全部
+```
+
+### `[SKILL_QUESTIONS]` 契约
+```
+[SKILL_QUESTIONS]
+skill=learning-bot
+type=preset|preflight|clarify|all
+count=<问题块数>
+data=<紧凑 JSON 数组；每个块 {type,id,prompt,multiselect,options:[{key,label,example?,exclusive?,on_missing?}]}>
+[/SKILL_QUESTIONS]
+```
+
+preflight/clarify 的题目定义在 [`scripts/questions.json`](scripts/questions.json)；preset 由
+`learning_bot.py` 从 registry 动态生成。`on_missing` 为 `self:dev-route` 表示应转到开发类 skill，
+`self:-China` 表示改用国内镜像。
 
 ## [SKILL_RESULT] 契约
 

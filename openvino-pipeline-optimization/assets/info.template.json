@@ -1,0 +1,16 @@
+{
+    "venv_name": "<venv-name>",
+    "python_version": "3.11",
+    "mem_need_gb": 3.5,
+    "server_alive_timeout": 300,
+    "models": [
+        {
+            "model_id": "<repo>/<model-name>",
+            "dir_name": "<model-name>",
+            "required_files": [
+                "config.json",
+                "openvino_model.bin"
+            ]
+        }
+    ]
+}

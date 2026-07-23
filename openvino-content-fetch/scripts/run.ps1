@@ -8,6 +8,7 @@
     run.ps1 -Source github [--china]
     run.ps1 -Source all [--china] [--out C:\path\to\out.json]
     run.ps1 -Download "Qwen2.5-7B-Instruct-INT4-OV" [-OutDir C:\models\qwen] [--china]
+    run.ps1 -Questions preflight     # 输出准备好的问题（preset/preflight/clarify/all）
     run.ps1 -Status
     run.ps1 -ShowDebug
 #>
@@ -19,6 +20,7 @@ param(
   [string]$Out,
   [string]$Download,
   [string]$OutDir,
+  [ValidateSet("preset","preflight","clarify","all")][string]$Questions,
   [switch]$Status,
   [switch]$ShowDebug
 )
@@ -44,6 +46,12 @@ function Get-Python {
     return (Join-Path $VenvDir "Scripts\python.exe")
   }
   return "python"
+}
+
+# ---------------- prepared questions (offline; no venv / network needed) ----------------
+if ($Questions) {
+  & powershell -ExecutionPolicy Bypass -File (Join-Path $ScriptDir "questions.ps1") -Type $Questions
+  exit $LASTEXITCODE
 }
 
 # ---------------- lifecycle: status / debug ----------------

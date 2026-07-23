@@ -188,6 +188,56 @@ def cmd_route(reg, text):
     ])
 
 
+QUESTIONS_FILE = HERE / "questions.json"
+
+
+def _emit_questions(skill, qtype, blocks):
+    """Emit a [SKILL_QUESTIONS] block (same contract as the shared questions.ps1)."""
+    print("[SKILL_QUESTIONS]")
+    print(f"skill={skill}")
+    print(f"type={qtype}")
+    print(f"count={len(blocks)}")
+    print("data=" + json.dumps(blocks, ensure_ascii=False))
+    print("[/SKILL_QUESTIONS]")
+
+
+def _preset_block(reg):
+    """Build the preset (recommend) block from the registry — single source of truth."""
+    opts = [
+        {"key": s["key"], "label": s["name_cn"], "example": s["question"]}
+        for s in reg["preset_skills"]
+    ]
+    return {
+        "type": "preset",
+        "id": "menu",
+        "prompt": "你可以直接问我这些本地能力（每条对应一个在 Intel AIPC 上离线运行的 skill）：",
+        "multiselect": False,
+        "options": opts,
+    }
+
+
+def cmd_questions(reg, qtype):
+    """Emit prepared questions. preset comes from the registry; preflight/clarify from
+    scripts/questions.json. Offline / network-free."""
+    extra = {}
+    if QUESTIONS_FILE.exists():
+        with open(QUESTIONS_FILE, "r", encoding="utf-8") as f:
+            extra = json.load(f)
+    preset = [_preset_block(reg)]
+    preflight = extra.get("preflight", [])
+    clarify = extra.get("clarify", [])
+    if qtype == "preset":
+        blocks = preset
+    elif qtype == "preflight":
+        blocks = preflight
+    elif qtype == "clarify":
+        blocks = clarify
+    else:  # all
+        blocks = preset + preflight + clarify
+    _emit_questions("learning-bot", qtype, blocks)
+    return 0
+
+
 def cmd_install(reg, key, out_dir):
     presets = {s["key"]: s for s in reg["preset_skills"]}
     if key not in presets:
@@ -238,6 +288,9 @@ def main():
     g.add_argument("--menu", action="store_true", help="打印推荐给用户的预设问题")
     g.add_argument("--route", metavar="TEXT", help="对一句用户输入做路由建议")
     g.add_argument("--install", metavar="KEY", help="下载并解压对应的 aipc-skill")
+    g.add_argument("--questions", metavar="TYPE",
+                   choices=["preset", "preflight", "clarify", "all"],
+                   help="输出准备好的问题（preset/preflight/clarify/all），[SKILL_QUESTIONS] 契约")
     ap.add_argument("--out-dir", default=None, help="--install 的目标目录（默认 ~/.aipc-skills）")
     args = ap.parse_args()
 
@@ -248,6 +301,8 @@ def main():
     if args.route is not None:
         cmd_route(reg, args.route)
         return 0
+    if args.questions is not None:
+        return cmd_questions(reg, args.questions)
     if args.install is not None:
         return cmd_install(reg, args.install, args.out_dir)
     return 0

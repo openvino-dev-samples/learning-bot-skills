@@ -1,0 +1,66 @@
+{
+  "skill": "openvino-content-fetch",
+  "preset": [
+    {
+      "type": "preset",
+      "id": "menu",
+      "prompt": "你可以让我帮你找内容 / 找模型：",
+      "multiselect": false,
+      "options": [
+        { "key": "notebooks", "label": "推荐 / 抓取 OpenVINO notebook、教程、示例", "example": "run.ps1 -Source github" },
+        { "key": "modelscope", "label": "看 ModelScope AI PC Zone 有什么新内容", "example": "run.ps1 -Source modelscope" },
+        { "key": "csdn", "label": "找 CSDN Intel 开发者专区文章", "example": "run.ps1 -Source csdn" },
+        { "key": "download", "label": "查找 / 下载模型或预转换的 OpenVINO IR", "example": "run.ps1 -Download \"Qwen2.5-7B-Instruct-INT4-OV\"" },
+        { "key": "learning_path", "label": "根据主题给我一条学习路径（用真实 notebook 佐证）", "example": "run.ps1 -Source all" }
+      ]
+    }
+  ],
+  "preflight": [
+    {
+      "type": "preflight",
+      "id": "prereq",
+      "prompt": "开始前请确认（多选）：没勾的项我会据此调整抓取/下载方式。",
+      "multiselect": true,
+      "options": [
+        { "key": "network", "label": "能直连 GitHub / HuggingFace（否则我会用 -China 走国内镜像）", "on_missing": "self:-China" },
+        { "key": "goal_known", "label": "已经清楚是「找内容」还是「下模型」" },
+        { "key": "disk", "label": "下模型的话，本地磁盘空间充足（IR 可能数 GB）" },
+        { "key": "all_done", "label": "以上均确认，直接开始", "exclusive": true }
+      ]
+    }
+  ],
+  "clarify": [
+    {
+      "type": "clarify",
+      "id": "mode",
+      "prompt": "你要的是内容还是模型文件？",
+      "multiselect": false,
+      "options": [
+        { "key": "content", "label": "找 notebook / 教程 / 文章（内容索引）" },
+        { "key": "model", "label": "下载模型 / 预转换 IR", "example": "-Download <model-id>" }
+      ]
+    },
+    {
+      "type": "clarify",
+      "id": "source",
+      "prompt": "从哪个来源抓？",
+      "multiselect": false,
+      "options": [
+        { "key": "github", "label": "GitHub（OpenVINO notebook）", "example": "-Source github" },
+        { "key": "modelscope", "label": "ModelScope AI PC Zone", "example": "-Source modelscope" },
+        { "key": "csdn", "label": "CSDN Intel 开发者专区", "example": "-Source csdn" },
+        { "key": "all", "label": "全部来源（默认）", "example": "-Source all" }
+      ]
+    },
+    {
+      "type": "clarify",
+      "id": "china",
+      "prompt": "是否使用国内镜像 / 端点？",
+      "multiselect": false,
+      "options": [
+        { "key": "china", "label": "是，用 -China" },
+        { "key": "direct", "label": "否，直连" }
+      ]
+    }
+  ]
+}

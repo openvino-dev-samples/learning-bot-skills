@@ -1,0 +1,56 @@
+{
+  "skill": "openvino-environment-management",
+  "preset": [
+    {
+      "type": "preset",
+      "id": "menu",
+      "prompt": "关于 Intel AIPC 开发环境，你可以让我：",
+      "multiselect": false,
+      "options": [
+        { "key": "precheck", "label": "先诊断当前环境状态（PC1–PC10 预检查）", "example": "precheck_env.ps1" },
+        { "key": "setup", "label": "安装 / 配置缺失组件（Python/Git/OpenVINO/PyTorch）", "example": "intel_aipc_env_setup.ps1" },
+        { "key": "setup_china", "label": "用国内镜像安装（中国大陆网络）", "example": "intel_aipc_env_setup.ps1 -China" },
+        { "key": "optional", "label": "顺带安装可选组件 CMake / Visual Studio", "example": "intel_aipc_env_setup.ps1 -FullInstall" }
+      ]
+    }
+  ],
+  "preflight": [
+    {
+      "type": "preflight",
+      "id": "prereq",
+      "prompt": "请勾选你「已经具备」的项（多选）：没勾的项我会在配置阶段帮你装上。",
+      "multiselect": true,
+      "options": [
+        { "key": "os", "label": "运行在 Windows 上（PC1）", "on_missing": "self:unsupported" },
+        { "key": "intel_cpu", "label": "Intel 处理器 + 图形驱动已就绪（PC2/PC3）", "on_missing": "self:driver" },
+        { "key": "python", "label": "Python 3.10+ 与 pip 已安装（PC4）", "on_missing": "self:ST1" },
+        { "key": "git", "label": "Git 已安装（PC6）", "on_missing": "self:ST3" },
+        { "key": "ov_torch", "label": "OpenVINO + PyTorch 已安装（PC9/PC10）", "on_missing": "self:ST5-ST7" },
+        { "key": "all_done", "label": "以上均完成，无需引导我", "exclusive": true }
+      ]
+    }
+  ],
+  "clarify": [
+    {
+      "type": "clarify",
+      "id": "china",
+      "prompt": "是否使用国内镜像（清华 pip + ghproxy git）？",
+      "multiselect": false,
+      "options": [
+        { "key": "china", "label": "是，用 -China" },
+        { "key": "direct", "label": "否，保持现有 pip/git 配置" }
+      ]
+    },
+    {
+      "type": "clarify",
+      "id": "optional",
+      "prompt": "是否需要可选组件（编译类工具链）？",
+      "multiselect": true,
+      "options": [
+        { "key": "cmake", "label": "安装 CMake", "example": "-InstallCmake" },
+        { "key": "vs", "label": "安装 Visual Studio Community", "example": "-InstallVS" },
+        { "key": "none", "label": "都不需要，只装基础环境", "exclusive": true }
+      ]
+    }
+  ]
+}

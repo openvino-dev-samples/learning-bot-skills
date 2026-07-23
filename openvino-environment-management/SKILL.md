@@ -43,6 +43,34 @@ powershell -ExecutionPolicy Bypass -File intel_aipc_env_setup.ps1 -FullInstall
 | `-FullInstall` | 安装所有组件（包括可选组件） | `$false` |
 | `-China` | 使用国内镜像（清华 pip 镜像 + ghproxy.net 用于 github.com） | `$false` |
 
+## 准备好的问题（Prepared Questions）
+
+在配置前，本技能可以先给用户**一组准备好的问题**（离线、无需网络）：让用户勾选「已具备哪些前提」，
+再据此只安装缺失部分。三类问题以统一的 `[SKILL_QUESTIONS]` 契约输出：
+
+```powershell
+# 本技能的脚本在技能根目录（无 run.ps1），直接调用 questions.ps1：
+powershell -ExecutionPolicy Bypass -File questions.ps1 -Type preset      # 推荐能做的事
+powershell -ExecutionPolicy Bypass -File questions.ps1 -Type preflight   # 前置条件多选（OS/Intel CPU/Python/Git/OpenVINO+PyTorch 是否就绪）
+powershell -ExecutionPolicy Bypass -File questions.ps1 -Type clarify      # 澄清（-China？装 CMake/VS？）
+powershell -ExecutionPolicy Bypass -File questions.ps1 -Type all          # 全部（默认）
+```
+
+### `[SKILL_QUESTIONS]` 契约
+```
+[SKILL_QUESTIONS]
+skill=openvino-environment-management
+type=preset|preflight|clarify|all
+count=<问题块数>
+data=<紧凑 JSON 数组；每个块 {type,id,prompt,multiselect,options:[{key,label,example?,exclusive?,on_missing?}]}>
+[/SKILL_QUESTIONS]
+```
+
+**agent 约定：** `preflight` 各项与预检查 PC1–PC10 对应；用户**没勾**的项通过 `on_missing` 指向对应的
+安装步骤（如 `self:ST1` 装 Python、`self:ST5-ST7` 装 OpenVINO/PyTorch），随后调用 `intel_aipc_env_setup.ps1`
+补齐。问题清单在 [questions.json](questions.json)，由 [questions.ps1](questions.ps1) 输出。这一步是「用提问代替
+自动探测」的补充，`precheck_env.ps1` 仍可用于程序化诊断。
+
 ## 预检查阶段 (PC1-PC10)
 
 ### PC1: 检查 Windows 操作系统

@@ -11,6 +11,7 @@
     run.ps1 --goal "local ASR to LLM to TTS" [--china]
     run.ps1 --serve --slug vlm-chatbot [--port 18790]    # build+optimize, then serve
     run.ps1 --dry-run --slug vlm-chatbot     # resolve + plan only, no downloads
+    run.ps1 --questions preflight            # prepared questions (preset/preflight/clarify/all)
     run.ps1 --status | --stop | --debug
 #>
 param(
@@ -22,6 +23,7 @@ param(
   [switch]$dryrun,
   [switch]$serve,
   [int]$port = 18790,
+  [ValidateSet("preset","preflight","clarify","all")][string]$questions,
   [switch]$status,
   [switch]$stop,
   [switch]$debug
@@ -55,6 +57,12 @@ function Get-Python {
     return (Join-Path $VenvDir "Scripts\python.exe")
   }
   return "python"
+}
+
+# ---------------- prepared questions (offline; no venv / clone needed) ----------------
+if ($questions) {
+  & powershell -ExecutionPolicy Bypass -File (Join-Path $ScriptDir "questions.ps1") -Type $questions
+  exit $LASTEXITCODE
 }
 
 # ---------------- lifecycle: status / stop / debug ----------------

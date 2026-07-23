@@ -1,0 +1,13 @@
+{
+    "display_name": "<中文显示名称>",
+    "display_description": "<一句话中文描述>",
+    "detail_describe": "<详细描述>",
+    "name": "local-<skill-name>",
+    "icon": "https://...",
+    "use_cases": [
+        "<典型使用场景 1>",
+        "<典型使用场景 2>"
+    ],
+    "author": "Github",
+    "version": "1.0.0"
+}
