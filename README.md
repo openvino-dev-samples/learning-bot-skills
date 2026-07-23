@@ -19,6 +19,43 @@ to a preset local skill or, when out of scope, to one of the three dev skills. T
 downloaded from the [`makejiang/aipc-skills`](https://github.com/makejiang/aipc-skills/releases/tag/1.0.6)
 `1.0.6` release.
 
+## Prepared Questions
+
+Every skill can emit a set of **prepared questions** for the agent to render as an interactive
+checklist before running its main flow — offline, no venv/network needed. Three types, one shared
+`[SKILL_QUESTIONS]` contract:
+
+| Type | Purpose |
+|---|---|
+| `preset` | Recommend what the skill can do ("you can ask me these") |
+| `preflight` | Multi-select prerequisite confirmation; each option can carry `on_missing` → the skill/step to run first for anything left unchecked |
+| `clarify` | Disambiguate an ambiguous request |
+
+```powershell
+# script-based skills (pipeline-optimization / content-fetch): via run.ps1
+run.ps1 --questions preflight        # pipeline (also -Questions on content-fetch)
+# environment-management (scripts at root, no run.ps1): call questions.ps1 directly
+powershell -ExecutionPolicy Bypass -File questions.ps1 -Type preflight
+# learning-bot: preset is generated from its registry
+run.ps1 -Questions all
+```
+
+Contract:
+
+```
+[SKILL_QUESTIONS]
+skill=<name>
+type=preset|preflight|clarify|all
+count=<number of question blocks>
+data=<compact JSON array; each block {type,id,prompt,multiselect,options:[{key,label,example?,exclusive?,on_missing?}]}>
+[/SKILL_QUESTIONS]
+```
+
+Questions live in each skill's `questions.json`; the shared `questions.ps1` (or `learning_bot.py
+--questions` for the launcher) emits the block. `exclusive` options (e.g. "以上均完成，无需引导我")
+clear the rest; `on_missing` routes unmet prerequisites to `openvino-environment-management`,
+`openvino-content-fetch`, or a `self:<action>` step.
+
 ## Learning Bot
 
 - **[`learning-bot-system-prompt.md`](learning-bot-system-prompt.md)** — the system prompt for the

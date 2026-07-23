@@ -92,6 +92,26 @@ Write-Host "6. run.ps1 --status emits a [SKILL_RESULT]" -ForegroundColor White
 $statusOut = & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $Scripts "run.ps1") --status 2>&1 | Out-String
 Check "run.ps1 --status SKILL_RESULT" { $statusOut -match "\[SKILL_RESULT\]" }
 
+Write-Host ""
+Write-Host "7. Prepared questions ([SKILL_QUESTIONS] contract, offline)" -ForegroundColor White
+function Test-Questions($expectSkill, $out) {
+  $lines = $out -split "`r?`n"
+  if ($lines -notcontains "[SKILL_QUESTIONS]" -or $lines -notcontains "[/SKILL_QUESTIONS]") { return $false }
+  $sk = ($lines | Where-Object { $_ -like "skill=*" } | Select-Object -First 1)
+  $cn = ($lines | Where-Object { $_ -like "count=*" } | Select-Object -First 1)
+  $dt = ($lines | Where-Object { $_ -like "data=*" } | Select-Object -First 1)
+  if (-not $sk -or -not $cn -or -not $dt) { return $false }
+  if ($sk -ne "skill=$expectSkill") { return $false }
+  try { $arr = $dt.Substring(5) | ConvertFrom-Json } catch { return $false }
+  return (@($arr).Count -eq [int]$cn.Substring(6)) -and (@($arr).Count -gt 0)
+}
+$QPs = Join-Path $Scripts "questions.ps1"
+Check "questions.ps1 exists" { Test-Path $QPs }
+foreach ($t in @("preset","preflight","clarify","all")) {
+  $qo = & powershell -ExecutionPolicy Bypass -File $QPs -Type $t 2>&1 | Out-String
+  Check "questions -Type $t valid block" { Test-Questions "openvino-pipeline-optimization" $qo }
+}
+
 # ---- cleanup ----
 if (-not $KeepTemp) { Remove-Item -Recurse -Force $Tmp -ErrorAction SilentlyContinue }
 else { Write-Host "`n(kept temp repo at $Tmp)" -ForegroundColor Gray }

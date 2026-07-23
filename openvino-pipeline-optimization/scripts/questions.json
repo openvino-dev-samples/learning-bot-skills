@@ -1,0 +1,75 @@
+{
+  "skill": "openvino-pipeline-optimization",
+  "preset": [
+    {
+      "type": "preset",
+      "id": "menu",
+      "prompt": "你可以让我做这些（多模型 OpenVINO 流水线）：",
+      "multiselect": false,
+      "options": [
+        { "key": "build_slug", "label": "用某个 notebook 搭一个 demo", "example": "run.ps1 --slug whisper-asr-genai" },
+        { "key": "compose", "label": "把多个 notebook 组合成一条流水线", "example": "run.ps1 --slug whisper-asr-genai,llm-rag-langchain" },
+        { "key": "by_goal", "label": "按目标自动选型搭建", "example": "run.ps1 --goal \"local ASR to LLM to TTS\"" },
+        { "key": "serve", "label": "把流水线部署成本地服务(client+server)", "example": "run.ps1 --serve --slug vlm-chatbot" },
+        { "key": "package", "label": "把流水线封装成可分发的本地 AI skill", "example": "见 SKILL.md「封装为可分发的本地 AI skill」" }
+      ]
+    }
+  ],
+  "preflight": [
+    {
+      "type": "preflight",
+      "id": "prereq",
+      "prompt": "请确认以下前置条件状态（多选）：没勾选的项我会先帮你补上，再进入构建/优化主流程。",
+      "multiselect": true,
+      "options": [
+        { "key": "hw_driver", "label": "Intel Core Ultra AI PC / Arc，驱动+注册表已就绪，已重启", "on_missing": "openvino-environment-management" },
+        { "key": "toolchain", "label": "Conda + Visual Studio + oneAPI 已安装", "on_missing": "openvino-environment-management" },
+        { "key": "model", "label": "目标模型 / 预转换 IR 已下载到本地", "on_missing": "openvino-content-fetch" },
+        { "key": "notebooks", "label": "openvino_notebooks 仓库已克隆到本地", "on_missing": "self:--dry-run" },
+        { "key": "all_done", "label": "以上均完成，无需引导我", "exclusive": true }
+      ]
+    }
+  ],
+  "clarify": [
+    {
+      "type": "clarify",
+      "id": "target",
+      "prompt": "你想怎么指定流水线？",
+      "multiselect": false,
+      "options": [
+        { "key": "slug", "label": "我知道 notebook slug（如 whisper-asr-genai）", "example": "--slug whisper-asr-genai" },
+        { "key": "goal", "label": "我只有一个目标描述（如 ASR→LLM→TTS）", "example": "--goal \"local ASR to LLM to TTS\"" }
+      ]
+    },
+    {
+      "type": "clarify",
+      "id": "deviceprec",
+      "prompt": "是否覆盖默认的每阶段设备/精度？",
+      "multiselect": false,
+      "options": [
+        { "key": "default", "label": "用默认（LLM→GPU/INT4，encoder→GPU/INT8，retriever→CPU/INT8…）" },
+        { "key": "override", "label": "我要自己指定 --device / --precision" }
+      ]
+    },
+    {
+      "type": "clarify",
+      "id": "serve",
+      "prompt": "构建+优化后是否部署为本地服务？",
+      "multiselect": false,
+      "options": [
+        { "key": "no", "label": "先只构建 + 基准测试" },
+        { "key": "yes", "label": "构建后用 --serve 部署 (client+server)" }
+      ]
+    },
+    {
+      "type": "clarify",
+      "id": "china",
+      "prompt": "是否使用国内镜像？",
+      "multiselect": false,
+      "options": [
+        { "key": "china", "label": "是，用 --china（pip=tuna / HF=hf-mirror / notebooks=gitcode）" },
+        { "key": "direct", "label": "否，直连 GitHub / HuggingFace" }
+      ]
+    }
+  ]
+}

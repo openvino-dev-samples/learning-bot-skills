@@ -1,0 +1,33 @@
+{
+  "skill": "learning-bot",
+  "preflight": [
+    {
+      "type": "preflight",
+      "id": "prereq",
+      "prompt": "开始前先确认（多选）：这决定我走本地预设能力还是开发类 skill。",
+      "multiselect": true,
+      "options": [
+        { "key": "aipc", "label": "运行在 Intel AIPC (Windows) 上", "on_missing": "self:unsupported" },
+        { "key": "network", "label": "能直连 GitHub / HuggingFace（否则我用国内镜像 -China）", "on_missing": "self:-China" },
+        { "key": "goal_local", "label": "我要的是开箱即用的本地能力（语音/图像/文档/自动化…）" },
+        { "key": "goal_dev", "label": "我要的是开发/构建（找 notebook、下模型、搭环境、做流水线）", "on_missing": "self:dev-route" },
+        { "key": "all_done", "label": "以上均确认，直接开始", "exclusive": true }
+      ]
+    }
+  ],
+  "clarify": [
+    {
+      "type": "clarify",
+      "id": "modality",
+      "prompt": "你大概想用哪一类能力？",
+      "multiselect": false,
+      "options": [
+        { "key": "speech", "label": "语音（转文字 / 合成 / 实时翻译）" },
+        { "key": "image", "label": "图像（文生图 / 图生图 / 超分 / 目标检测）" },
+        { "key": "doc", "label": "文档（OCR / PDF 解析 / 截图问答）" },
+        { "key": "automation", "label": "自动化 / 系统（电脑自动化 / 显存查看）" },
+        { "key": "dev", "label": "以上都不是，我要做开发 / 构建" }
+      ]
+    }
+  ]
+}

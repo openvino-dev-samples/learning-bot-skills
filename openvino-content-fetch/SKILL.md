@@ -30,6 +30,7 @@ description: |
 | -Source | github（notebook）、modelscope（AI PC zone）、csdn（Intel 开发者专区），或 all（默认） |
 | -Download | 要下载的 model id（例如 `Qwen2.5-7B-Instruct-INT4-OV`）；触发下载模式 |
 | -OutDir | 模型 / IR 下载到的本地目录（默认为 `~/.openvino/models`） |
+| -Questions | 输出准备好的问题：`preset` / `preflight` / `clarify` / `all`（`[SKILL_QUESTIONS]` 契约，离线） |
 | -China | 切换为使用国内镜像/端点 |
 
 ```powershell
@@ -42,6 +43,31 @@ run.ps1 -Source all -China
 # 从 ModelScope 下载预转换的 OpenVINO IR 模型
 run.ps1 -Download "Qwen2.5-7B-Instruct-INT4-OV" -OutDir "D:\models\qwen2.5-7b"
 ```
+
+## 准备好的问题（Prepared Questions）
+
+在抓取/下载前，本技能可以先给用户**一组准备好的问题**（离线、无需 venv/网络）：
+
+```powershell
+run.ps1 -Questions preset      # 推荐问题："你可以让我帮你找内容 / 找模型"
+run.ps1 -Questions preflight   # 前置条件多选（能否直连、找内容还是下模型、磁盘空间）
+run.ps1 -Questions clarify     # 澄清追问（内容 vs 模型、source、-China）
+run.ps1 -Questions all         # 以上全部（默认）
+```
+
+### `[SKILL_QUESTIONS]` 契约
+```
+[SKILL_QUESTIONS]
+skill=openvino-content-fetch
+type=preset|preflight|clarify|all
+count=<问题块数>
+data=<紧凑 JSON 数组；每个块 {type,id,prompt,multiselect,options:[{key,label,example?,exclusive?,on_missing?}]}>
+[/SKILL_QUESTIONS]
+```
+
+**agent 约定：** 需求含糊时先走 `-Questions clarify` 收敛意图；对 `preflight` 里**没勾**的项按 `on_missing`
+调整（如 `self:-China` 表示改用国内镜像）。问题清单在 [scripts/questions.json](scripts/questions.json)，由共享的
+[scripts/questions.ps1](scripts/questions.ps1) 输出。
 
 ## 内容抓取 —— [SKILL_RESULT]（抓取契约）
 

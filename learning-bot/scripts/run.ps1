@@ -8,12 +8,14 @@
 
   Usage:
     run.ps1 -Menu                         # 打印推荐给用户的预设问题
+    run.ps1 -Questions preflight          # 输出准备好的问题（preset/preflight/clarify/all）
     run.ps1 -Route "帮我把录音转成文字"    # 对一句用户输入给出路由建议
     run.ps1 -Install asr [-OutDir C:\path] # 下载并解压对应的 aipc-skill
 #>
 [CmdletBinding()]
 param(
   [switch]$Menu,
+  [ValidateSet("preset","preflight","clarify","all")][string]$Questions,
   [string]$Route,
   [string]$Install,
   [string]$OutDir
@@ -34,6 +36,10 @@ $py = Get-Python
 
 if ($Menu) {
   & $py $Bot --menu
+  exit $LASTEXITCODE
+}
+if ($Questions) {
+  & $py $Bot --questions $Questions
   exit $LASTEXITCODE
 }
 if ($Route) {
