@@ -58,7 +58,7 @@
       "zip": "skill-local-mineru-1.0.6-20260628-001411.zip",
       "flow_order": 1,
       "io": { "in": "document", "out": "text" },
-      "keywords": ["pdf", "文档解析", "解析文档", "转markdown", "转 markdown", "文档转", "mineru", "扫描件", "论文解析", "版面分析", "parse document"]
+      "keywords": ["pdf", "文档解析", "解析文档", "转markdown", "转 markdown", "文档转", "mineru", "扫描件", "扫描版", "论文解析", "版面分析", "parse document", "结构化文本", "解析成结构化", "卷宗", "研报"]
     },
     {
       "key": "txt2img",
