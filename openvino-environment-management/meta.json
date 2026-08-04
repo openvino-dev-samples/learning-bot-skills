@@ -1,7 +1,7 @@
 {
   "display_name": "OpenVINO 环境管理",
   "display_description": "在 Windows 上配置 Intel AIPC 开发环境：Python、Git、ModelScope、最新稳定版 OpenVINO、PyTorch CPU。通过 -China 参数启用国内镜像。",
-  "detail_describe": "在 Windows 上配置 Intel AIPC 开发环境：安装 Python、Git、ModelScope、最新稳定版 OpenVINO 和 PyTorch CPU。传入 -China 参数可应用国内镜像（清华 pip 镜像 + ghproxy git 镜像，现有 pip.ini 会被备份）；不传入则保留现有 pip/git 配置不变。CMake 和 Visual Studio 为可选组件。本地运行；基础安装无需管理员权限。",
+  "detail_describe": "在 Windows 上配置 Intel AIPC 开发环境：安装 Python、Git、ModelScope、最新稳定版 OpenVINO 和 PyTorch CPU。传入 -China 参数才会应用国内镜像（清华 pip 镜像 + ghproxy git 镜像，覆盖前会把现有 pip.ini 备份为 pip.ini.bak）；不传入则完全不改动现有 pip/git 配置。CMake 和 Visual Studio 为可选组件，其中 Visual Studio 还需额外传 -Yes 确认（数 GB、需管理员权限）。非交互式环境（agent/CI）请加 -Yes，脚本不会停下来等待输入。结果以 [SKILL_RESULT] 块输出。本地运行；基础安装无需管理员权限。",
   "name": "openvino-environment-management",
   "icon": "",
   "use_cases": [

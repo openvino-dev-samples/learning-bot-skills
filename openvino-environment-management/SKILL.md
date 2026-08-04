@@ -5,33 +5,54 @@ description: "Intel AIPC 开发环境在 Windows 上的两阶段配置。阶段1
 
 # Intel AIPC 环境管理
 
+## 如何调用本技能
+
+**注意本技能的布局与其他三个不同：脚本在技能根目录下，没有 `scripts/` 子目录，也没有 `run.ps1`。**
+两个入口脚本分别是 `precheck_env.ps1`（诊断）和 `intel_aipc_env_setup.ps1`（安装）。
+
+```powershell
+# <REPO> = 本仓库根目录，例如 D:\learning-bot-skills
+powershell -NoProfile -ExecutionPolicy Bypass -File "<REPO>\openvino-environment-management\precheck_env.ps1"
+```
+
+| 约定 | 说明 |
+|---|---|
+| 工作目录 | 任意 —— 只要 `-File` 后面是正确的绝对路径 |
+| 退出码 | `0` = 成功（或仅有 WARN）；`1` = 失败（含未知参数、预检查出现 FAIL） |
+| 判断成败 | **只看 `[SKILL_RESULT]` 里的 `status=`**，不要凭「有输出」就断定成功 |
+| 参数写法 | 单连字符 + 完整参数名（`-China` / `-InstallCmake` / `-Yes`），不要用缩写 |
+| 未知参数 | 返回 `status=error`、`reason=unknown-argument` 并退出 1，**不会**静默忽略 |
+| 非交互环境 | agent / CI 里请加 `-Yes`：脚本不会停下来等 stdin，未确认的高代价步骤会被**跳过并说明**，而不是卡住 |
+
 ## 智能体使用指南
 
 本技能专为**AI 智能体**设计，用于在 Windows 上配置 Intel AIPC 开发环境。请遵循以下两阶段工作流程：
 
 ### 阶段1：预检查（诊断）
-首先运行独立的预检查脚本评估当前环境状态。这有助于确定需要安装或配置的组件。
+首先运行独立的预检查脚本评估当前环境状态。它是**只读**的，不改动任何配置，可以放心先跑。
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File precheck_env.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File precheck_env.ps1
 ```
 
-脚本会在 `[AGENT_OUTPUT]` 和 `[/AGENT_OUTPUT]` 标签之间输出 JSON 摘要，便于程序化解析。
+脚本输出两个块：`[AGENT_OUTPUT]` 是详细 JSON 摘要（向后兼容保留），`[SKILL_RESULT]` 是与本仓库其余
+3 个 skill 统一的 ASCII 契约（`status` / `pass` / `warn` / `fail` / `failed_checks` / `warned_checks` /
+`next`）。**优先解析 `[SKILL_RESULT]`。**
 
 ### 阶段2：配置（安装/配置）
 根据预检查结果，运行配置脚本安装缺失组件。
 
 ```powershell
-# 基础配置（不使用镜像）
-powershell -ExecutionPolicy Bypass -File intel_aipc_env_setup.ps1
+# 基础配置（不使用镜像；不会改动你现有的 pip / git 配置）
+powershell -NoProfile -ExecutionPolicy Bypass -File intel_aipc_env_setup.ps1
 
-# 使用国内镜像（中国大陆）
-powershell -ExecutionPolicy Bypass -File intel_aipc_env_setup.ps1 -China
+# 使用国内镜像（中国大陆）：写清华 pip 源 + ghproxy git 规则
+powershell -NoProfile -ExecutionPolicy Bypass -File intel_aipc_env_setup.ps1 -China
 
 # 包含可选组件
-powershell -ExecutionPolicy Bypass -File intel_aipc_env_setup.ps1 -InstallCmake
-powershell -ExecutionPolicy Bypass -File intel_aipc_env_setup.ps1 -InstallVS
-powershell -ExecutionPolicy Bypass -File intel_aipc_env_setup.ps1 -FullInstall
+powershell -NoProfile -ExecutionPolicy Bypass -File intel_aipc_env_setup.ps1 -InstallCmake
+powershell -NoProfile -ExecutionPolicy Bypass -File intel_aipc_env_setup.ps1 -InstallVS -Yes
+powershell -NoProfile -ExecutionPolicy Bypass -File intel_aipc_env_setup.ps1 -FullInstall -Yes
 ```
 
 ## 脚本参数
@@ -39,9 +60,14 @@ powershell -ExecutionPolicy Bypass -File intel_aipc_env_setup.ps1 -FullInstall
 | 参数 | 说明 | 默认值 |
 |-----------|-------------|---------|
 | `-InstallCmake` | 安装 CMake | `$false` |
-| `-InstallVS` | 安装 Visual Studio Community 版本 | `$false` |
-| `-FullInstall` | 安装所有组件（包括可选组件） | `$false` |
-| `-China` | 使用国内镜像（清华 pip 镜像 + ghproxy.net 用于 github.com） | `$false` |
+| `-InstallVS` | 安装 Visual Studio Community 版本（需管理员权限，数 GB，**还需要 `-Yes` 确认**） | `$false` |
+| `-FullInstall` | 安装所有组件（包括可选组件；其中 VS 仍需 `-Yes`） | `$false` |
+| `-China` | 使用国内镜像（清华 pip 镜像 + ghproxy.net 用于 github.com）。**不传就完全不改动你的 pip / git 配置** | `$false` |
+| `-Yes` | 非交互式确认：不等 stdin，并放行 Visual Studio 这类高代价安装 | `$false` |
+
+> **给 agent 的提醒：** 只传 `-InstallVS` / `-FullInstall` 是**不会**安装 Visual Studio 的 ——
+> 必须同时传 `-Yes`。这是刻意设计的确认门，避免误触发一个数 GB、需要管理员权限的安装。
+> 未确认时脚本会打印说明并把该步骤记入 `steps_skipped`，而不是静默跳过。
 
 ## 准备好的问题（Prepared Questions）
 
@@ -115,6 +141,11 @@ data=<紧凑 JSON 数组；每个块 {type,id,prompt,multiselect,options:[{key,l
 **警告时操作**：运行 [ST7](#st7-安装-pytorch-cpu)。
 
 ## 配置阶段 (ST1-ST9)
+
+> **⚠️ 下面的代码块仅供理解每一步在做什么，请勿复制执行。**
+> 唯一的执行路径是 `intel_aipc_env_setup.ps1`。手工复制这些片段会绕过脚本里的
+> `-China` 开关、`-Yes` 确认门和 `[SKILL_RESULT]` 汇报，等于放弃所有安全保护。
+> 需要哪一步，就带上对应参数去跑那个脚本。
 
 ### ST1: 安装 Python
 **触发条件**：PC4 失败/警告
@@ -494,9 +525,14 @@ python $env:TEMP\hello_query_device.py
 
 ## 配置安全性
 
-- `-China` 标志仅在明确请求时修改配置
-- 覆盖前会将现有的 `pip.ini` 备份到 `pip.ini.bak`
-- Git 镜像只是一个 `insteadOf` 规则，可以轻松移除
+- **不传 `-China` 时，脚本完全不碰你的 pip / git 配置** —— ST2（写 `pip.ini`）和 ST4（写全局 git
+  `insteadOf`）都被跳过，并在输出里记入 `steps_skipped`。
+- 传了 `-China` 且要覆盖已有 `pip.ini` 时，会先备份到 `pip.ini.bak`（已存在备份则不重复覆盖），
+  备份路径会在 `[SKILL_RESULT]` 的 `pip_ini_backup=` 里给出。
+- Git 镜像只是一个全局 `insteadOf` 规则，可以用下面的命令随时移除。
+- Visual Studio（ST9）需要 `-InstallVS`/`-FullInstall` **加上** `-Yes` 才会执行。
+- 非交互式会话（agent / CI）下脚本不会停下来等 stdin：需要确认的步骤要么因 `-Yes` 放行，
+  要么被跳过并说明原因。
 
 **恢复命令**：
 ```powershell

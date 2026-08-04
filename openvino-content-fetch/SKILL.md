@@ -13,6 +13,30 @@ description: |
 
 # OpenVINO Content Fetch —— learning bot 流水线步骤
 
+## 如何调用本技能
+
+入口脚本：`openvino-content-fetch/scripts/run.ps1`（也可用同目录的 `run.cmd`）。
+
+**照抄下面这一行的形式，不要简写成 `run.ps1 -Source github`** —— PowerShell 不会从当前目录执行裸
+文件名，而且脚本在 `scripts/` 子目录下：
+
+```powershell
+# <REPO> = 本仓库根目录，例如 D:\learning-bot-skills
+powershell -NoProfile -ExecutionPolicy Bypass -File "<REPO>\openvino-content-fetch\scripts\run.ps1" -Source github
+```
+
+| 约定 | 说明 |
+|---|---|
+| 工作目录 | 任意 —— 只要 `-File` 后面是正确的绝对路径 |
+| 退出码 | `0` = 成功；`1` = 失败（含未知参数、python 缺失、pip 安装失败） |
+| 判断成败 | **只看 `[SKILL_RESULT]` 里的 `status=`**，不要凭「有输出」就断定成功 |
+| 参数写法 | 单连字符 + 完整参数名（`-Source` / `-Download` / `-Questions`），不要用缩写 |
+| 未知参数 | 返回 `status=error`、`reason=unknown-argument` 并退出 1，**不会**静默忽略 |
+| 零成本探路 | `-Questions` 和 `-Status` 完全离线，不建 venv、不联网，可以放心先跑 |
+
+> 首次执行抓取/下载时会在 `%USERPROFILE%\.openvino\venv-contentfetch` 建 venv 并 pip 安装依赖，
+> 耗时较长；只想看能力清单时请用 `-Questions preset`，不要用抓取命令去试探。
+
 本技能同时负责 learning bot 的**内容**和**模型文件**两部分：
 
 1. **内容** —— 来自 OpenVINO GitHub 仓库、ModelScope AI PC Zone 和 CSDN Intel 开发者专区的

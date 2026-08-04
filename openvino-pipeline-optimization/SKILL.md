@@ -23,6 +23,30 @@ description: |
 
 # OpenVINO Pipeline Optimization —— 开发者脚手架 & 参考标准
 
+## 如何调用本技能
+
+入口脚本：`openvino-pipeline-optimization/scripts/run.ps1`（也可用同目录的 `run.cmd`）。
+
+**照抄下面这一行的形式，不要简写成 `run.ps1 --slug ...`** —— PowerShell 不会从当前目录执行裸文件名，
+而且脚本在 `scripts/` 子目录下：
+
+```powershell
+# <REPO> = 本仓库根目录，例如 D:\learning-bot-skills
+powershell -NoProfile -ExecutionPolicy Bypass -File "<REPO>\openvino-pipeline-optimization\scripts\run.ps1" --dry-run --slug vlm-chatbot
+```
+
+| 约定 | 说明 |
+|---|---|
+| 工作目录 | 任意 —— 只要 `-File` 后面是正确的绝对路径 |
+| 退出码 | `0` = 成功；`1` = 失败（含未知参数、python 缺失、clone/resolve 失败） |
+| 判断成败 | **只看 `[SKILL_RESULT]` 里的 `status=`**，不要凭「有输出」就断定成功 |
+| 参数写法 | 双连字符 + 完整参数名（`--slug` / `--dry-run` / `--questions`）。**不要用缩写**：`-s` 会因同时匹配 `slug/serve/status/stop` 而报 `AmbiguousParameter` |
+| 未知参数 | 返回 `status=error`、`reason=unknown-argument` 并退出 1，**不会**静默忽略 |
+| 先跑哪一条 | 不确定时先跑 `--dry-run`：它**只解析不下载**（不 clone、不建 venv、不装依赖、不导出 IR），是零代价的探路命令 |
+
+> `--dry-run` 在本地还没有 `openvino_notebooks` 仓库时会返回 `status=error` + `reason=repo-required`
+> —— 这是**预期行为**（dry-run 承诺不下载），不是故障。要真正构建就去掉 `--dry-run` 重跑。
+
 本技能为开发者提供在 Intel AIPC 上构建多模型 OpenVINO 流水线 demo 的**方向和一套约定** ——
 而不是一条现成的流水线。它展示*如何*从 `openvino_notebooks` 发现各阶段、*如何*把各阶段放到
 设备/精度上、*如何*做基准测试，以及*如何*用 **client + server** 把它们封装起来。真正的流水线
@@ -293,9 +317,13 @@ data=<紧凑 JSON 数组；每个块 {type,id,prompt,multiselect,options:[{key,l
 | `--questions preset\|preflight\|clarify\|all` | 输出准备好的问题（`[SKILL_QUESTIONS]` 契约，离线） |
 | `--status` | venv / notebooks / 上次 plan / **服务**状态（以 `[SKILL_RESULT]` 输出） |
 | `--stop` | POST `/api/shutdown`，然后杀掉 pidfile + 残留进程 |
-| `--debug` | 详细诊断（venv、repo、设备、最近日志） |
+| `--debug` | 详细诊断（venv、repo、设备、最近日志）。脚本内部的参数名是 `-showdebug`：`-debug` 是 PowerShell 的公共参数，不能重名，所以请统一写 `--debug` |
 
 退出码 `0` 成功 / `1` 出错。幂等：重跑会复用已克隆的仓库 + 已有 IR（标 `from IR`）。
+
+**`--dry-run` 的确切含义**：只做 resolve + 规划。它**不会** clone 仓库、不建 venv、不装依赖、
+不导出 IR、不跑 benchmark。仓库已在本地就用本地的解析；不在本地则返回 `reason=repo-required`
+并提示去掉 `--dry-run` 重跑 —— 绝不为了「让命令看起来成功」而偷偷下载。
 
 ## 排错（简要）
 - **repo-required / goal-unresolved** → 让 `--serve`/构建先克隆仓库；细化 `--goal` 或传 `--slug`。

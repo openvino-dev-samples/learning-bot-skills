@@ -17,6 +17,28 @@ description: |
 
 # Learning Bot —— 入口 / 启动 skill
 
+## 如何调用本技能
+
+入口脚本：`learning-bot/scripts/run.ps1`（也可用同目录的 `run.cmd`）。
+
+**照抄下面这一行的形式，不要简写成 `run.ps1 -Menu`** —— PowerShell 不会从当前目录执行裸文件名，
+而且脚本在 `scripts/` 子目录下，简写形式必然报 `not recognized`：
+
+```powershell
+# <REPO> = 本仓库根目录，例如 D:\learning-bot-skills
+powershell -NoProfile -ExecutionPolicy Bypass -File "<REPO>\learning-bot\scripts\run.ps1" -Menu
+```
+
+| 约定 | 说明 |
+|---|---|
+| 工作目录 | 任意 —— 只要 `-File` 后面是正确的绝对路径 |
+| 退出码 | `0` = 成功；`1` = 失败（含未知参数、python 缺失） |
+| 判断成败 | **只看 `[SKILL_RESULT]` 里的 `status=`**，不要凭「有输出」就断定成功 |
+| 参数写法 | 单连字符 + 完整参数名（`-Menu` / `-Route` / `-Install`），不要用缩写 |
+| 未知参数 | 返回 `status=error`、`reason=unknown-argument` 并退出 1，**不会**静默忽略 |
+
+---
+
 本技能是 Learning Bot 的**入口**。调用它 = "开启 Learning Bot"：向用户推荐一组预设问题，并根据用户
 的问题把请求路由到正确的下游 skill。它自己不做推理，而是负责**推荐 + 路由 + 安装**：
 
@@ -89,18 +111,22 @@ description: |
 | -Install \<key\> | 下载并解压对应的 aipc-skill（key 见上表） |
 | -OutDir | -Install 的目标目录（默认 `~/.aipc-skills`） |
 
+下面用 `$RUN` 代表入口脚本的绝对路径，实际调用时替换掉：
+
 ```powershell
+$RUN = "<REPO>\learning-bot\scripts\run.ps1"    # 例如 D:\learning-bot-skills\learning-bot\scripts\run.ps1
+
 # 启动 Learning Bot：推荐预设问题
-run.ps1 -Menu
+powershell -NoProfile -ExecutionPolicy Bypass -File $RUN -Menu
 
 # 输出准备好的问题（前置条件多选 / 澄清 / 全部）
-run.ps1 -Questions preflight
+powershell -NoProfile -ExecutionPolicy Bypass -File $RUN -Questions preflight
 
 # 对用户输入做路由（返回 preset / dev / clarify 建议）
-run.ps1 -Route "帮我把这段录音转成文字"
+powershell -NoProfile -ExecutionPolicy Bypass -File $RUN -Route "帮我把这段录音转成文字"
 
 # 安装某个预设本地 skill
-run.ps1 -Install asr
+powershell -NoProfile -ExecutionPolicy Bypass -File $RUN -Install asr
 ```
 
 ---
