@@ -304,9 +304,11 @@ Write-Host "`n需要执行的操作:"
 foreach ($key in $results.Keys) {
     $result = $results[$key]
     if ($result.status -eq "FAIL") {
-        Write-Fail "  $key: $($result.message) → 运行相应的配置步骤"
+        # 注意：必须写成 ${key}: —— 直接写 "$key:" 会被 PowerShell 当成驱动器限定的变量引用
+        # （如 $env:PATH），导致整个脚本解析失败。
+        Write-Fail "  ${key}: $($result.message) → 运行相应的配置步骤"
     } elseif ($result.status -eq "WARN") {
-        Write-Warn "  $key: $($result.message) → 考虑运行配置"
+        Write-Warn "  ${key}: $($result.message) → 考虑运行配置"
     }
 }
 
@@ -346,3 +348,31 @@ foreach ($key in $results.Keys) {
 
 $summary | ConvertTo-Json
 Write-Host "[/AGENT_OUTPUT]"
+
+# ---------------- [SKILL_RESULT]（与本仓库其余 3 个 skill 统一的契约）----------------
+# 上面的 [AGENT_OUTPUT] 保留不动以兼容既有调用方；这里再补一个统一契约块，让 agent 可以用
+# 和 learning-bot / content-fetch / pipeline-optimization 完全一样的方式解析本技能的输出。
+# 契约行只用 ASCII 的 key 与枚举值，中文放在 next= 里，避免终端编码差异破坏解析。
+$failedChecks = @($results.Keys | Where-Object { $results[$_].status -eq "FAIL" } | Sort-Object)
+$warnedChecks = @($results.Keys | Where-Object { $results[$_].status -eq "WARN" } | Sort-Object)
+$nextSteps    = @($summary.actions | ForEach-Object { $_.recommended_action })
+
+# FAIL 表示硬性不满足（非 Windows / 非 Intel）→ status=error；仅有 WARN 时仍是 ok，
+# 但会把 warn 项列出来，让 agent 知道进配置阶段前要先补哪几步。
+$overall = if ($failCount -gt 0) { "error" } else { "ok" }
+
+Write-Host "[SKILL_RESULT]"
+Write-Host "status=$overall"
+Write-Host "skill=openvino-environment-management"
+Write-Host "action=precheck"
+Write-Host "total=$($results.Count)"
+Write-Host "pass=$passCount"
+Write-Host "warn=$warnCount"
+Write-Host "fail=$failCount"
+Write-Host ("failed_checks=" + ($failedChecks -join ","))
+Write-Host ("warned_checks=" + ($warnedChecks -join ","))
+Write-Host ("next=" + ($nextSteps -join "; "))
+Write-Host "[/SKILL_RESULT]"
+
+# 退出码：有 FAIL -> 1（硬性不满足，不应继续配置）；只有 WARN -> 0（可以继续，装缺失组件）。
+if ($failCount -gt 0) { exit 1 } else { exit 0 }

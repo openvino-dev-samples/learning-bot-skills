@@ -1,10 +1,89 @@
+<#
+.SYNOPSIS
+    Intel AIPC Windows 开发环境配置脚本（ST1-ST9）。
+.DESCRIPTION
+    安装 Python / Git / Git-LFS / ModelScope / OpenVINO / PyTorch，可选 CMake / Visual Studio。
+
+    重要：param() 必须是本脚本的第一个可执行语句。如果在它之前放任何语句（哪怕是
+    Set-ExecutionPolicy），PowerShell 会把 param(...) 当成普通命令调用而不是参数声明，
+    结果是所有 -Xxx 参数被静默忽略、脚本仍返回退出码 0。不要在 param() 之前加任何代码。
+.PARAMETER China
+    使用国内镜像：写入清华 pip 源到 %APPDATA%\pip\pip.ini（覆盖前备份为 pip.ini.bak），
+    并配置 git 的 ghproxy.net insteadOf 规则。不传则完全不改动你现有的 pip / git 配置。
+.PARAMETER Yes
+    非交互式确认。跳过所有交互提示，并允许安装 Visual Studio（体积大、需管理员权限）。
+    在 agent / CI 等无 stdin 的环境下必须传，否则涉及确认的步骤会被跳过而不是卡住。
+#>
+param(
+    [switch]$InstallCmake,
+    [switch]$InstallVS,
+    [switch]$FullInstall,
+    [switch]$China,
+    [switch]$Yes,
+    [Parameter(ValueFromRemainingArguments = $true)][string[]]$Rest
+)
+
 Set-ExecutionPolicy Bypass -Scope Process -Force
 
-param(
-    [switch]$InstallCmake = $false,
-    [switch]$InstallVS = $false,
-    [switch]$FullInstall = $false
-)
+# ---------------- [SKILL_RESULT] 契约 ----------------
+# 契约行只使用 ASCII 的 key 与枚举值，中文一律放在 note= 里，避免 agent 终端的编码差异
+# 破坏机器解析。
+$script:StepsRun     = New-Object System.Collections.ArrayList
+$script:StepsSkipped = New-Object System.Collections.ArrayList
+$script:PipIniBackup = "none"
+
+function Emit-SkillResult {
+    param(
+        [string]$Status = "ok",
+        [string]$Note   = ""
+    )
+    Write-Host "[SKILL_RESULT]"
+    Write-Host "status=$Status"
+    Write-Host "skill=openvino-environment-management"
+    Write-Host "action=setup"
+    Write-Host ("china=" + $(if ($China) { "true" } else { "false" }))
+    Write-Host ("steps_run=" + ($script:StepsRun -join ","))
+    Write-Host ("steps_skipped=" + ($script:StepsSkipped -join ","))
+    Write-Host "pip_ini_backup=$script:PipIniBackup"
+    if ($Note) { Write-Host "note=$Note" }
+    Write-Host "[/SKILL_RESULT]"
+}
+
+# 非交互式检测：agent / CI 终端的 stdin 通常已重定向或为空，Read-Host 会卡住或吞掉一个
+# 空答案。任何需要用户点头的地方都必须先过这个函数，绝不直接 Read-Host。
+function Test-Interactive {
+    if ($Yes) { return $false }
+    try { return -not [Console]::IsInputRedirected } catch { return $false }
+}
+
+function Confirm-Step {
+    param(
+        [string]$Prompt,
+        [string]$SkipNote
+    )
+    if ($Yes) { return $true }
+    if (-not (Test-Interactive)) {
+        Write-Host "! 非交互式会话且未传 -Yes：$SkipNote" -ForegroundColor Yellow
+        Write-Host "  如需执行，请重新运行并加上 -Yes 参数。" -ForegroundColor Yellow
+        return $false
+    }
+    $answer = Read-Host "$Prompt [y/N]"
+    return ($answer -match '^(y|yes)$')
+}
+
+# ---------------- 未知参数：显式报错，绝不静默吞掉 ----------------
+if ($Rest -and $Rest.Count -gt 0) {
+    Write-Host "[SKILL_RESULT]"
+    Write-Host "status=error"
+    Write-Host "skill=openvino-environment-management"
+    Write-Host "action=setup"
+    Write-Host "reason=unknown-argument"
+    Write-Host ("unknown=" + ($Rest -join " "))
+    Write-Host "valid_params=-InstallCmake -InstallVS -FullInstall -China -Yes"
+    Write-Host "note=unrecognized argument; nothing was executed"
+    Write-Host "[/SKILL_RESULT]"
+    exit 1
+}
 
 function Write-Header {
     param([string]$text)
@@ -27,6 +106,8 @@ function Write-Warn {
 function Write-ErrorExit {
     param([string]$text)
     Write-Host "✗ $text" -ForegroundColor Red
+    # 硬失败也必须留下可解析的契约块，否则 agent 只能看到一行红字、无从判断成败。
+    Emit-SkillResult -Status "error" -Note $text
     exit 1
 }
 
@@ -72,9 +153,17 @@ if (-not ($isUltra -or $hasArc)) {
     Write-Warn "iGPU/NPU 加速性能可能受限"
     Write-Warn "建议：使用 Intel Ultra 系列处理器或 Intel Arc 独立显卡以获得最佳性能"
     Write-Host ""
-    $continue = Read-Host "按 Enter 继续，或输入 'exit' 退出"
-    if ($continue -eq "exit") {
-        exit 0
+    # 非交互式会话（agent / CI）下不能停在这里等 stdin —— 这只是性能提示，不是阻断条件，
+    # 所以默认继续，只把决定打印出来。交互式会话仍然给用户一次退出的机会。
+    if (Test-Interactive) {
+        $continue = Read-Host "按 Enter 继续，或输入 'exit' 退出"
+        if ($continue -eq "exit") {
+            [void]$script:StepsSkipped.Add("all")
+            Emit-SkillResult -Status "ok" -Note "user aborted at non-Ultra CPU warning"
+            exit 0
+        }
+    } else {
+        Write-Warn "非交互式会话：按「继续」处理（该提示仅为性能提醒，不阻断安装）。"
     }
 }
 
@@ -303,20 +392,36 @@ if (-not $pythonInstalled) {
 Write-Host ""
 Write-Host "[5/16] 正在配置 pip 国内镜像..." -ForegroundColor White
 
-$pipConfigDir = "$env:APPDATA\pip"
-if (-not (Test-Path $pipConfigDir)) {
-    New-Item -ItemType Directory -Path $pipConfigDir -Force | Out-Null
-}
+# ST2：只有显式传了 -China 才改写用户的 pip 配置。不传 -China 时保持现有配置原封不动 ——
+# 这是 SKILL.md「配置安全性」一节对用户的承诺。
+if ($China) {
+    $pipConfigDir = "$env:APPDATA\pip"
+    if (-not (Test-Path $pipConfigDir)) {
+        New-Item -ItemType Directory -Path $pipConfigDir -Force | Out-Null
+    }
 
-$pipConfig = @"
+    $pipIni = "$pipConfigDir\pip.ini"
+    if ((Test-Path $pipIni) -and (-not (Test-Path "$pipIni.bak"))) {
+        Copy-Item $pipIni "$pipIni.bak" -Force
+        $script:PipIniBackup = "$pipIni.bak"
+        Write-Warn "已把现有 pip.ini 备份到 $pipIni.bak"
+    }
+
+    $pipConfig = @"
 [global]
 index-url = https://pypi.tuna.tsinghua.edu.cn/simple
 [install]
 trusted-host = pypi.tuna.tsinghua.edu.cn
 "@
 
-Set-Content -Path "$pipConfigDir\pip.ini" -Value $pipConfig -Encoding UTF8
-Write-Success "pip 镜像已配置为清华大学镜像 (https://pypi.tuna.tsinghua.edu.cn/simple)"
+    Set-Content -Path $pipIni -Value $pipConfig -Encoding UTF8
+    [void]$script:StepsRun.Add("ST2")
+    Write-Success "pip 镜像已配置为清华大学镜像 (https://pypi.tuna.tsinghua.edu.cn/simple)"
+} else {
+    [void]$script:StepsSkipped.Add("ST2")
+    Write-Warn "跳过 pip 镜像配置（未传 -China）：你现有的 pip.ini 未被改动。"
+    Write-Warn "  如果在中国大陆且 pip 下载缓慢/超时，请加 -China 重新运行。"
+}
 
 Write-Host ""
 Write-Host "[6/16] 正在安装 Git..." -ForegroundColor White
@@ -420,21 +525,31 @@ if ($lfsDownloadSuccess) {
 Write-Host ""
 Write-Host "[8/16] 正在配置 Git 国内镜像..." -ForegroundColor White
 
-git config --global url."https://ghproxy.net/https://github.com/".insteadOf "https://github.com/"
+# ST4：同 ST2，只有显式传了 -China 才写全局 git 配置。这条 insteadOf 规则是全局生效的，
+# 会影响用户所有仓库，绝不能在用户没要求时偷偷加上。
+if ($China) {
+    git config --global url."https://ghproxy.net/https://github.com/".insteadOf "https://github.com/"
 
-$ghProxyConfig = git config --global --get url."https://ghproxy.net/https://github.com/".insteadOf
-if ($ghProxyConfig -eq "https://github.com/") {
-    Write-Success "Git 镜像已配置为 ghproxy.net（仅 github.com）"
+    $ghProxyConfig = git config --global --get url."https://ghproxy.net/https://github.com/".insteadOf
+    if ($ghProxyConfig -eq "https://github.com/") {
+        [void]$script:StepsRun.Add("ST4")
+        Write-Success "Git 镜像已配置为 ghproxy.net（仅 github.com）"
+        Write-Host "  移除方式：git config --global --unset url.`"https://ghproxy.net/https://github.com/`".insteadOf" -ForegroundColor Gray
+    } else {
+        [void]$script:StepsSkipped.Add("ST4")
+        Write-Warn "Git 镜像配置可能失败"
+    }
 } else {
-    Write-Warn "Git 镜像配置可能失败"
+    [void]$script:StepsSkipped.Add("ST4")
+    Write-Warn "跳过 Git 镜像配置（未传 -China）：你的全局 git 配置未被改动。"
+    Write-Warn "  如果 git clone github.com 超时，请加 -China 重新运行。"
 }
-
-Write-Host "  测试验证：ghproxy 镜像比原始 URL 快约 33%" -ForegroundColor Green
 
 Write-Host ""
 Write-Host "[9/16] 正在安装 CMake（可选）..." -ForegroundColor White
 
 if ($InstallCmake -or $FullInstall) {
+    [void]$script:StepsRun.Add("ST8")
     $cmakeVersion = "4.3.4"
     $cmakeZip = "$env:TEMP\cmake-$cmakeVersion.zip"
     $cmakeTargetDir = "$env:USERPROFILE\cmake"
@@ -499,6 +614,7 @@ if ($InstallCmake -or $FullInstall) {
         Write-Warn "请手动从以下地址安装: https://cmake.org/download/"
     }
 } else {
+    [void]$script:StepsSkipped.Add("ST8")
     Write-Warn "  跳过 CMake 安装"
     Write-Warn "  如果需要编译 C++ 项目，请使用 -InstallCmake 参数重新运行脚本"
     Write-Warn "  命令: powershell -File intel_aipc_env_setup.ps1 -InstallCmake"
@@ -507,13 +623,24 @@ if ($InstallCmake -or $FullInstall) {
 Write-Host ""
 Write-Host "[10/16] 正在安装 Visual Studio Community Edition（可选）..." -ForegroundColor White
 
-if ($InstallVS -or $FullInstall) {
+# ST9 是本脚本代价最大的一步：需要管理员权限、下载数 GB、耗时 10-30 分钟。除了 -InstallVS /
+# -FullInstall 之外，还必须显式确认（-Yes 或交互式回答 y），避免弱 agent 顺手触发。
+$vsRequested = $InstallVS -or $FullInstall
+$vsConfirmed = $false
+if ($vsRequested) {
+    Write-Warn "  即将安装 Visual Studio Community 2022（需管理员权限、约数 GB、10-30 分钟）"
+    $vsConfirmed = Confirm-Step -Prompt "  确认安装 Visual Studio 吗？" `
+                                -SkipNote "跳过 Visual Studio 安装（这是一个数 GB 的高代价操作）"
+}
+
+if ($vsRequested -and $vsConfirmed) {
+    [void]$script:StepsRun.Add("ST9")
     $vsInstallerUrl = "https://aka.ms/vs/17/release/vs_community.exe"
     $vsInstaller = "$env:TEMP\vs_community.exe"
 
     Write-Warn "  注意：Visual Studio 安装需要管理员权限"
     Write-Warn "  如果未以管理员身份运行，将触发 UAC 提示"
-    
+
     Write-Host "  正在从 $vsInstallerUrl 下载..."
     try {
         Invoke-WebRequest -Uri $vsInstallerUrl -OutFile $vsInstaller -UseBasicParsing -ErrorAction Stop
@@ -527,10 +654,11 @@ if ($InstallVS -or $FullInstall) {
         Write-Warn "请确保选择 C++ 桌面开发工作负载"
     }
 } else {
+    [void]$script:StepsSkipped.Add("ST9")
     Write-Warn "  跳过 Visual Studio 安装"
     Write-Warn "  如果需要编译 C++ 项目，请使用 -InstallVS 参数重新运行脚本"
-    Write-Warn "  命令: powershell -File intel_aipc_env_setup.ps1 -InstallVS"
-    Write-Warn "  注意：必须以管理员身份运行"
+    Write-Warn "  命令: powershell -File intel_aipc_env_setup.ps1 -InstallVS -Yes"
+    Write-Warn "  注意：必须以管理员身份运行；-Yes 表示确认这是一个数 GB 的安装"
 }
 
 Write-Host ""
@@ -827,16 +955,28 @@ if ($isUltra) {
     Write-Host "✓ 检测到 Intel Ultra 系列处理器" -ForegroundColor Green
 }
 Write-Host "✓ GPU 设备和驱动检查完成" -ForegroundColor Green
-Write-Host "✓ Python 已安装且 pip 镜像已配置" -ForegroundColor Green
-Write-Host "✓ Git 已安装且 ghproxy.net 镜像已配置" -ForegroundColor Green
+Write-Host "✓ Python 已安装" -ForegroundColor Green
+if ($China) {
+    Write-Host "✓ pip 镜像已配置为清华源（-China）" -ForegroundColor Green
+} else {
+    Write-Host "○ pip 镜像已跳过：你现有的 pip.ini 未被改动（未传 -China）" -ForegroundColor Gray
+}
+Write-Host "✓ Git 已安装" -ForegroundColor Green
+if ($China) {
+    Write-Host "✓ Git ghproxy.net 镜像已配置（-China）" -ForegroundColor Green
+} else {
+    Write-Host "○ Git 镜像已跳过：你的全局 git 配置未被改动（未传 -China）" -ForegroundColor Gray
+}
 Write-Host "✓ Git-LFS 已安装" -ForegroundColor Green
 if ($InstallCmake -or $FullInstall) {
     Write-Host "✓ CMake 已安装" -ForegroundColor Green
 } else {
     Write-Host "○ CMake 已跳过（可选）" -ForegroundColor Gray
 }
-if ($InstallVS -or $FullInstall) {
+if ($script:StepsRun -contains "ST9") {
     Write-Host "✓ Visual Studio Community 2022 已安装" -ForegroundColor Green
+} elseif ($vsRequested) {
+    Write-Host "○ Visual Studio 已请求但未确认 —— 未安装（需加 -Yes）" -ForegroundColor Gray
 } else {
     Write-Host "○ Visual Studio 已跳过（可选）" -ForegroundColor Gray
 }
@@ -849,9 +989,10 @@ Write-Host "✓ 环境变量已更新" -ForegroundColor Green
 Write-Host ""
 Write-Host "可选安装命令:" -ForegroundColor White
 Write-Host "--------"
+Write-Host "使用国内镜像: powershell -File intel_aipc_env_setup.ps1 -China" -ForegroundColor Yellow
 Write-Host "安装 CMake: powershell -File intel_aipc_env_setup.ps1 -InstallCmake" -ForegroundColor Yellow
-Write-Host "安装 Visual Studio: powershell -File intel_aipc_env_setup.ps1 -InstallVS" -ForegroundColor Yellow
-Write-Host "安装全部（包括可选组件）: powershell -File intel_aipc_env_setup.ps1 -FullInstall" -ForegroundColor Yellow
+Write-Host "安装 Visual Studio: powershell -File intel_aipc_env_setup.ps1 -InstallVS -Yes" -ForegroundColor Yellow
+Write-Host "安装全部（包括可选组件）: powershell -File intel_aipc_env_setup.ps1 -FullInstall -Yes" -ForegroundColor Yellow
 Write-Host "仅基础安装（默认）: powershell -File intel_aipc_env_setup.ps1" -ForegroundColor Yellow
 
 Write-Host ""
@@ -861,8 +1002,16 @@ Write-Host "1. 请重启终端以确保环境变量生效" -ForegroundColor Yell
 Write-Host "2. ModelScope 已设置为大模型下载的首选方式" -ForegroundColor Yellow
 Write-Host "3. Hugging Face 镜像: https://hf-mirror.com（已设置 HF_ENDPOINT）" -ForegroundColor Yellow
 Write-Host "4. 更新 Intel 驱动: https://www.intel.com/content/www/us/en/support/detect.html" -ForegroundColor Yellow
-Write-Host "5. Git 通过 ghproxy.net 访问 github.com" -ForegroundColor Yellow
+if ($China) {
+    Write-Host "5. Git 通过 ghproxy.net 访问 github.com（-China 已生效）" -ForegroundColor Yellow
+} else {
+    Write-Host "5. 未使用国内镜像：pip / git 配置保持原样；如需镜像请加 -China" -ForegroundColor Yellow
+}
 Write-Host "6. CMake 和 Visual Studio 为可选组件，仅在需要 C++ 编译时安装" -ForegroundColor Yellow
 
 Write-Host ""
 Write-Host "祝您使用 Intel AIPC 愉快编程！" -ForegroundColor Cyan
+
+# 机器可解析的收尾契约块 —— agent 必须读 status 而不是靠上面的中文摘要判断成败。
+Emit-SkillResult -Status "ok" -Note "setup finished; see the summary above for per-step detail"
+exit 0
