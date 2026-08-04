@@ -1,7 +1,7 @@
 {
   "display_name": "Learning Bot 启动器",
   "display_description": "Learning Bot 的入口 skill：向用户推荐一组预设问题，每条对应一个在 Intel AIPC 上本地运行的 aipc-skill（ASR/TTS/实时翻译/OCR/文档解析/文生图/图生图/文生视频/超分/目标检测/截图问答/电脑自动化/显存查看）；命中预设则下载并调用对应 skill，超出预设范围则路由到 ENV/FETCH/PIPE 三个开发类 skill。",
-  "detail_describe": "调用本技能即开启 Learning Bot：推荐 14 条预设问题给用户，并对用户请求做路由——命中预设本地能力则下载并调用对应的 aipc-skill（来自 makejiang/aipc-skills 1.0.6 release），超出预设范围则根据实际需求转交给三个开发类 skill（openvino-environment-management / openvino-content-fetch / openvino-pipeline-optimization），无法归类则先向用户追问。全部本地离线运行，仅限 Intel AIPC (Windows)。",
+  "detail_describe": "调用本技能即开启 Learning Bot：推荐 14 条预设问题给用户，并对用户请求做路由。这 14 个本地 skill 被当作原子能力——先判断需求能否以它们为基础搭出来：单个能力够用就直接调用（scope=preset），需要多个能力就按数据流顺序组合成一条有序链（scope=compose，如 mineru→tts 做有声书、asr→realtime-translator 做实时字幕、ocr→tts 朗读图片文字）。三个开发类 skill（openvino-environment-management / openvino-content-fetch / openvino-pipeline-optimization）是辅助，通过 assist 字段参与，负责补环境、找模型、做服务化；链条上 14 个原子覆盖不到的阶段通过 gaps 字段标出，由那一段单独开发后接回链条。只有当产出物本身就是开发资产（环境 / notebook / 模型文件 / 量化 IR / 性能报告）时才直接交给开发类 skill。无法归类则先向用户追问。全部本地离线运行，仅限 Intel AIPC (Windows)。",
   "name": "learning-bot",
   "icon": "",
   "use_cases": [

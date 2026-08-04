@@ -24,6 +24,35 @@ parsed — decide the next step from the block; never assume success.
 
 **Always classify intent + user persona first**, then choose which skills to run and in what order.
 
+### Local capabilities are atoms — compose them before reaching for a dev skill
+
+The 14 local aipc-skills (`asr`, `tts`, `realtime-translator`, `ocr-npu`/`ocr-gpu`, `mineru`,
+`txt2img`, `img2img`, `txt2video`, `sr`, `yolo26`, `screenshot-qa`, `computer-use`, `vram`) are
+**atomic building blocks**, not a lookup table. Decide in this order:
+
+1. Non-Intel hardware mentioned → confirm the platform first.
+2. Is the **deliverable itself a dev asset** (an environment, a notebook, a model file, a quantized
+   IR, a benchmark report)? → go straight to a dev skill. Nothing else qualifies for this branch.
+3. Can **several** atoms be chained to do it? → **compose** them in data-flow order
+   (`mineru→tts` for an audiobook, `asr→realtime-translator` for live subtitles, `ocr→tts` to read
+   a picture aloud, `txt2img→sr` for a high-res illustration).
+4. Can **one** atom do it? → call that one.
+5. Otherwise → dev skill, or ask.
+
+Steps 3 and 4 both come **before** handing anything to a dev skill. "Deploy it as a service" is
+*not* a reason to skip them: build the chain out of atoms first, then use
+`openvino-pipeline-optimization` to turn it into a resident service.
+
+**When a chain has a gap** — a stage none of the 14 atoms covers (voice cloning, speaker
+diarization, face recognition, segmentation, depth/3D, pose, source separation, video QA) — do
+**not** abandon the chain. Keep using atoms for every stage they do cover, and build only the
+missing stage yourself via `openvino-content-fetch` (find the model) →
+`openvino-pipeline-optimization` (wire it in), then splice it back into the chain.
+
+`learning-bot`'s `-Route` reports this as `scope=preset|compose|dev|clarify` plus `targets=`
+(the ordered chain), `assist=` (dev skills in a supporting role) and `gaps=` (stages you must build
+yourself). Parse those fields rather than assuming a single target.
+
 ### Personas (adapt tone + depth)
 
 | Persona | Signals | How you respond |

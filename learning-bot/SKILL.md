@@ -4,10 +4,14 @@ description: |
   Learning Bot 的入口 / 启动 skill。调用本技能即可"开启 Learning Bot"：它会把一组**预设问题**推荐
   给用户，每条预设问题对应一个在 Intel AIPC 上本地运行的 aipc-skill（ASR、TTS、实时翻译、OCR(NPU/GPU)、
   MinerU 文档解析、文生图、图生图、文生视频、超分、YOLO26 目标检测、截图问答、电脑自动化、显存查看）。
-  当用户问到这些预设问题时，本技能负责下载并调用对应的本地 skill；当用户的需求**超出**这些预设本地
-  能力时，本技能会根据实际需求改为路由到三个开发类 skill：openvino-environment-management（配环境）、
-  openvino-content-fetch（找 notebook / 下载模型）、openvino-pipeline-optimization（组装 / 优化 / 部署
-  流水线）。
+  这 14 个 skill 是**原子能力**：本技能会先分析用户需求能否以它们为基础搭出来 —— 单个能力能做就
+  直接调用；需要多个能力才能做的，就把它们按数据流顺序**组合成一条链**（如 mineru→tts 做有声书、
+  asr→realtime-translator 做实时字幕、ocr→tts 朗读图片文字）。三个开发类 skill
+  （openvino-environment-management 配环境、openvino-content-fetch 找 notebook / 下载模型、
+  openvino-pipeline-optimization 组装 / 优化 / 部署流水线）是**辅助**：只在链条缺环境、缺模型、
+  需要服务化，或某一段能力这 14 个原子覆盖不到时才参与，由那一段单独开发后接回链条。
+  只有当需求的**产出物本身就是开发资产**（环境 / notebook / 模型文件 / 量化 IR / 性能报告）时，
+  才直接交给开发类 skill 从零开发。
   当用户想启动 / 打开 learning bot、想知道"你能做什么 / 有哪些功能"、或提出上述任一本地推理需求时调用
   本技能。触发词：start learning bot、open learning bot、启动 / 开启 learning bot、你能做什么、
   有哪些功能、推荐一些能力、语音转文字、文字转语音、实时翻译、OCR、识别文字、解析 PDF、文生图、
@@ -44,13 +48,83 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "<REPO>\learning-bot\scripts
 
 1. **推荐（Menu）** —— 被调用时，把下面 14 条预设问题推荐给用户。每条预设问题都对应一个在本机
    （Intel AIPC）离线运行的 aipc-skill。
-2. **路由（Route）** —— 判断用户的话属于哪一类：
-   - **命中预设** → 下载并调用对应的本地 aipc-skill。
-   - **超出预设范围** → 根据实际需求路由到三个开发类 skill（ENV / FETCH / PIPE）。
-   - **无法归类** → 先向用户追问（任务 / 模态 / 目标），不做静默假设。
+2. **路由（Route）** —— 见下面的「路由判断顺序」。
 3. **安装（Install）** —— 从 aipc-skills 的 1.0.6 release 下载并解压所选 skill 的 zip 到本地。
 
 > 路由脚本给出的是**建议**，不是硬性判决。最终由 agent 结合上下文决定调用哪个 skill。
+
+---
+
+## 核心原则：14 个本地能力是**原子能力**，优先拿它们拼装
+
+这 14 个 skill 不是一张「命中就调、没命中就算了」的查找表，而是一组**可以串起来用的积木**。
+面对一个需求，**先分析它能不能用这些原子能力（单个或组合）搭出来**，能搭就搭；三个开发类 skill
+（ENV / FETCH / PIPE）是**辅助**，负责补环境、找模型、做服务化，而不是一没命中预设就整个接管、
+从零开发。
+
+### 路由判断顺序（严格按此顺序）
+
+| # | 判断 | 结果 |
+|---|---|---|
+| 1 | 提到非 Intel 硬件（Mac / Apple Silicon 等）？ | `clarify` —— 先确认硬件平台 |
+| 2 | 需求的**产出物**是不是开发资产（环境 / notebook / 教程 / 模型文件 / 量化 IR / 性能报告）？ | `dev` —— 这类拿原子能力当不了基础 |
+| 3 | 能不能用**多个**原子能力**组合**做出来？ | `compose` —— 返回有序链 `targets` |
+| 4 | 能不能用**一个**原子能力做出来？ | `preset` |
+| 5 | 以上都不行 | `dev` / `clarify` |
+
+**关键点：第 3 步排在第 4 步之前，第 3、4 步都排在「转交开发类 skill」之前。**
+只有第 2 步（产出物本身就是开发资产）和第 5 步才允许直接走开发类 skill。
+
+### 链条上有缺口怎么办 —— `gaps=`
+
+如果需求里有一段是 14 个原子能力覆盖不到的（语音克隆、声纹识别、人脸识别、图像分割、深度估计、
+姿态估计、人声分离、视频问答），**不要因此放弃整条链**：
+
+- 能被原子能力覆盖的阶段 → **照常用预设原子能力**
+- 覆盖不到的阶段 → 出现在 `gaps=` 里，**参考 `openvino-content-fetch`（找模型）和
+  `openvino-pipeline-optimization`（接进流水线）单独开发这一段**，做完再接回链条
+
+例：「把这段录音转成文字，并区分是谁在说话」
+→ `targets=asr`（转文字用现成原子能力）+ `gaps=speaker-id`（说话人分离需要单独开发）。
+
+### 辅助字段 `assist=`
+
+即使是 `preset` / `compose`，也可能需要开发类 skill 打配合：
+
+| 用户提到 | `assist` |
+|---|---|
+| 部署 / 服务 / 常驻 / 流水线 / 优化 / 加速 | `openvino-pipeline-optimization` |
+| 没装 / 装不上 / 环境 / 第一次用 | `openvino-environment-management` |
+| 缺模型 / 没有模型 / 换个模型 | `openvino-content-fetch` |
+
+例：「把 whisper→LLM→TTS 组成流水线并部署成服务」
+→ `scope=compose`、`targets=asr,tts`、`assist=openvino-pipeline-optimization`。
+**主体仍然是预设原子能力**，PIPE 只负责把它变成常驻服务。
+
+### 组合执行约定
+
+拿到 `targets=a,b,c` 后，agent 按顺序逐个执行，**不要期待脚本自动串联**：
+
+1. 对每个 key 依次 `-Install <key>`，再调用该 skill。
+2. 把上一步的产物作为下一步的输入（各阶段的输入 / 输出类型见 registry 的 `io` 字段）。
+3. **每一步都要解析 `[SKILL_RESULT]` 的 `status=`**，失败就停下并如实报告，不要硬着头皮往下走。
+4. `gaps=` 里的阶段没有现成 skill，按 FETCH → PIPE 的路子单独做，做完再接回链条。
+
+### 已知组合配方
+
+维护在 [`scripts/skills_registry.json`](scripts/skills_registry.json) 的 `combos` 里（与路由同源）：
+
+| 配方 | 链条 |
+|---|---|
+| 实时字幕 / 会议助手 | `asr → realtime-translator` |
+| 会议纪要 | `asr` → 由 agent 直接总结 |
+| 文档转有声书 | `mineru → tts` |
+| 图片文字朗读 | `ocr-npu → tts` |
+| 生成图并增强 | `txt2img → sr` |
+| 看屏幕并自动操作 | `screenshot-qa → computer-use` |
+| 带配音的视频 | `txt2video → tts` |
+
+配方表是白名单，不追求穷尽；没列进去的组合由「命中多个原子能力」自动按 `flow_order` 排序兜住。
 
 ---
 
@@ -95,9 +169,15 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "<REPO>\learning-bot\scripts
 | [`openvino-content-fetch`](../openvino-content-fetch/) (FETCH) | 找 notebook / 教程 / 示例 / 文章，或搜索 / 下载模型与预转换 IR |
 | [`openvino-pipeline-optimization`](../openvino-pipeline-optimization/) (PIPE) | 把多个模型组装成流水线、优化设备/精度、做基准测试或部署为服务 |
 
-判断优先级：**预设本地能力 → 开发类 skill → 追问澄清**。但当用户带有明确的开发意图词
-（"下载模型 / 找模型 / 部署 / 流水线 / benchmark / 搭环境 / notebook / 教程 / 学习路径"）时，
-即使句子里出现了某个模态词，也优先走开发类 skill（例如 "下载 ASR 模型" 是 FETCH 的活，不是 `asr`）。
+判断优先级见上面的「路由判断顺序」：**预设组合 → 预设单点 → 开发类 skill → 追问澄清**。
+
+只有当用户的**产出物本身就是开发资产**时才直接走开发类 skill —— 开发意图词为
+"下载模型 / 找模型 / 搭环境 / benchmark / 找瓶颈 / 量化 / notebook / 教程 / 学习路径"。
+即使句子里出现了某个模态词也一样（例如 "下载 ASR 模型" 是 FETCH 的活，不是 `asr`）。
+
+> **注意"部署 / 流水线 / 服务化"不在这个列表里。** 「把 asr→llm→tts 组成流水线并部署成服务」
+> 是能用预设原子能力搭出主体的，应当走 `compose` 并把 PIPE 放进 `assist=`，
+> 而不是整个交给 PIPE 从零开发。
 
 ---
 
@@ -181,11 +261,18 @@ data=[{"key":..,"name":..,"question":..}, ...]
 status=ok
 action=route
 matched=true|false
-scope=preset|dev|clarify
-target=<skill key 或 ENV/FETCH/PIPE 的 skill 名；clarify 时为空>
+scope=preset|compose|dev|clarify
+target=<单个 key；compose 时为链首；clarify 时为空>
+targets=<有序逗号分隔的完整链条；dev/clarify 时为空>
+assist=<逗号分隔的辅助 dev skill；可为空>
+gaps=<逗号分隔的缺口 id：预设原子能力覆盖不到、需要单独开发的阶段；可为空>
 reason=<归类理由>
 [/SKILL_RESULT]
 ```
+
+`target=` 保留为单个值，只读它的老解析方不会出错；要拿完整链条请读 `targets=`。
+`gaps=` 非空表示这条链有一段没有现成 skill —— **其余阶段仍然照常用预设原子能力**，
+只有缺口那段需要参考 FETCH / PIPE 单独开发。
 
 ### 安装（install）
 
