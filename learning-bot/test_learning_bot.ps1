@@ -118,6 +118,46 @@ Check "gap request -> uncovered stage in gaps"        { $gap -match "gaps=[^\r\n
 Check "gap request -> FETCH offered to build the gap" { $gap -match "assist=[^\r\n]*openvino-content-fetch" }
 
 Write-Host ""
+Write-Host "4c. Routing: content deliverables map to scope=synthesize" -ForegroundColor White
+# PRD / 培训材料 / 学习路径的产出物是散文文档：没有可安装的 skill，也没有推理要跑。
+# 这一节守两件事：(1) 认得出来；(2) 绝不把它们导去装 preset skill。
+$synthCases = @{
+  "给一个端侧会议纪要总结功能写个 PRD。"             = "prd"
+  "帮我写一份端侧 AI 功能的产品需求文档。"            = "prd"
+  "把 whisper notebook 变成给我团队的培训讲解材料。"  = "training"
+  "我想学 OpenVINO 的多模态推理，该从哪开始？"       = "learning-path"
+  "帮我规划一条 OpenVINO 学习路径。"                = "learning-path"
+}
+foreach ($k in $synthCases.Keys) {
+  $want = $synthCases[$k]
+  $out = & $Py $Bot --route $k 2>&1 | Out-String
+  Check "route '$k' -> scope=synthesize"    { $out -match "scope=synthesize" }
+  Check "route '$k' -> deliverable=$want"   { $out -match ("deliverable=" + [regex]::Escape($want) + "\r?\n") }
+  Check "route '$k' -> grounding via FETCH" { $out -match "target=openvino-content-fetch" }
+  # 没有可执行的链条：targets 必须为空，否则弱 agent 会去 -Install 一个不存在的东西。
+  Check "route '$k' -> targets is empty"    { $out -match "targets=\r?\n" }
+}
+
+# 回归：这条曾经被「会议纪要」的组合配方抢走，误判成 preset/asr。
+$prd = & $Py $Bot --route "给一个端侧会议纪要总结功能写个 PRD。" 2>&1 | Out-String
+Check "PRD request is NOT routed to a preset skill" { $prd -notmatch "scope=preset" }
+
+Write-Host ""
+Write-Host "4d. Routing: APP Build requests compose preset atoms" -ForegroundColor White
+# APP Build 与上面三类相反：产出物是可运行的应用，就该用原子能力拼出来。
+$appCases = @{
+  "帮我做一个本地的语音助手应用。"   = "asr,tts"
+  "帮我搭一个本地字幕生成 app。"    = "asr,realtime-translator"
+  "做一个能把 PDF 读出来的小工具。" = "mineru,tts"
+}
+foreach ($k in $appCases.Keys) {
+  $want = $appCases[$k]
+  $out = & $Py $Bot --route $k 2>&1 | Out-String
+  Check "route '$k' -> scope=compose"  { $out -match "scope=compose" }
+  Check "route '$k' -> targets=$want"  { $out -match ("targets=" + [regex]::Escape($want) + "\r?\n") }
+}
+
+Write-Host ""
 Write-Host "5. Routing: non-preset (dev) inputs map to ENV/FETCH/PIPE" -ForegroundColor White
 $devCases = @{
   "帮我在 Intel 笔记本上搭环境配置 OpenVINO" = "openvino-environment-management"

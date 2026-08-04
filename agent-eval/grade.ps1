@@ -50,7 +50,7 @@ foreach ($line in (Get-Content $Cases -Encoding UTF8)) {
 $verdicts = @{}
 foreach ($line in (Get-Content $Transcript -Encoding UTF8)) {
   if ($line -notmatch '\[EVAL_VERDICT\]') { continue }
-  $v = @{ case = ""; scope = ""; target = ""; targets = ""; gaps = ""; invoked = "" }
+  $v = @{ case = ""; scope = ""; target = ""; targets = ""; gaps = ""; deliverable = ""; invoked = "" }
   # 注意：targets= 里含有子串 target=，所以 target= 必须用 (?<!s) 把 targets 的尾巴排除掉，
   # 否则两个字段会互相串味。
   if ($line -match 'case=(\S+)')            { $v.case    = $Matches[1] }
@@ -58,6 +58,7 @@ foreach ($line in (Get-Content $Transcript -Encoding UTF8)) {
   if ($line -match 'targets=([^\s]*)')      { $v.targets = $Matches[1] }
   if ($line -match '(?<!s)\btarget=(\S*)')  { $v.target  = $Matches[1] }
   if ($line -match 'gaps=([^\s]*)')         { $v.gaps    = $Matches[1] }
+  if ($line -match 'deliverable=([^\s]*)')  { $v.deliverable = $Matches[1] }
   # invoked 在最后且可能含空格，所以单独匹配到行尾。
   if ($line -match 'invoked=(.*)$')         { $v.invoked = $Matches[1].Trim() }
   if ($v.case) { $verdicts[$v.case] = $v }
@@ -100,6 +101,14 @@ foreach ($id in $order) {
   if ($c.PSObject.Properties.Name -contains 'expect_targets' -and $c.expect_targets) {
     if ($v.targets -ne $c.expect_targets) {
       $problems += "targets=$($v.targets), expected $($c.expect_targets)"
+    }
+  }
+
+  # expect_deliverable：内容合成类必须认出交付物是哪一种文档（PRD / 培训材料 / 学习路径），
+  # 这决定了 agent 接下来是去写文档还是去装 skill 跑推理。
+  if ($c.PSObject.Properties.Name -contains 'expect_deliverable' -and $c.expect_deliverable) {
+    if ($v.deliverable -ne $c.expect_deliverable) {
+      $problems += "deliverable=$($v.deliverable), expected $($c.expect_deliverable)"
     }
   }
 

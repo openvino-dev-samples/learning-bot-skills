@@ -46,10 +46,14 @@ Bot 是否正确识别意图、选择并编排合适的 skill、并遵守诚实�
 
 | ID | 类别 | 用户 Prompt | 预期 Persona | 预期 Skill（含顺序） | 通过标准 |
 |---|---|---|---|---|---|
-| U1 | PRD Build | "给一个端侧会议纪要总结功能写个 PRD。" | 任一 | **FETCH →（PRD 合成）** | 产出结构化 PRD；通过 FETCH 用真实 OpenVINO 示例做支撑；未要求则不启动环境/下载。 |
-| U2 | Customize Training | "把 whisper notebook 变成给我团队的培训讲解材料。" | 任一 | **FETCH →（定制学习内容）** | 抓取 + 解析 notebook，产出定制培训材料；标注来源 notebook。 |
-| U3 | APP Build | "帮我搭一个本地字幕生成 app。" | Citizen | **FETCH → ENV → PIPE** | 完整构建到可运行 app；给出交付物 + 下一步；引导式语气。 |
-| U4 | Learning Path | "我想学 OpenVINO 的多模态推理，该从哪开始？" | Citizen | **FETCH →（学习路径合成）** | 基于真实 notebook/示例给出循序渐进的学习路径；禁止下载或部署任何东西。 |
+| U1 | PRD Build | "给一个端侧会议纪要总结功能写个 PRD。" | 任一 | **`synthesize` / `deliverable=prd`** | 产出结构化 PRD；通过 FETCH 用真实 OpenVINO 示例做支撑；**不得**因句中有「会议纪要」就去装 `asr` skill；未要求则不启动环境/下载。 |
+| U2 | Customize Training | "把 whisper notebook 变成给我团队的培训讲解材料。" | 任一 | **`synthesize` / `deliverable=training`** | 抓取 + 解析 notebook，产出定制培训材料；标注来源 notebook；不得转去做流水线优化。 |
+| U3 | APP Build | "帮我搭一个本地字幕生成 app。" | Citizen | **`compose` / `targets=asr,realtime-translator`** | 用预设原子能力拼出可运行 app；需要服务化时 PIPE 只进 `assist`；给出交付物 + 下一步；引导式语气。 |
+| U4 | Learning Path | "我想学 OpenVINO 的多模态推理，该从哪开始？" | Citizen | **`synthesize` / `deliverable=learning-path`** | 基于真实 notebook/示例给出循序渐进的学习路径；禁止下载或部署任何东西，也不该落 clarify。 |
+
+> **归属规则**：产出物是**散文文档**（PRD / 培训材料 / 学习路径）→ `scope=synthesize`，
+> FETCH 只取素材、正文由 agent 自己写；产出物是**可运行的应用**（APP Build）→ `scope=compose`，
+> 用 14 个预设原子能力拼出来。这四类里只有 APP Build 属于 skill 干的活。
 
 ## 4. Persona 敏感度
 
