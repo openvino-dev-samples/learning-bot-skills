@@ -140,7 +140,14 @@
       "id": "subtitle-assistant",
       "name_cn": "实时字幕 / 会议助手",
       "stages": ["asr", "realtime-translator"],
-      "keywords": ["字幕", "会议助手", "同传助手", "实时字幕", "会议记录", "开会用"]
+      "keywords": ["字幕", "会议助手", "同传助手", "实时字幕", "会议记录", "开会用", "字幕生成", "字幕 app", "字幕应用"]
+    },
+    {
+      "id": "voice-assistant",
+      "name_cn": "本地语音助手应用",
+      "stages": ["asr", "tts"],
+      "keywords": ["语音助手", "语音对话应用", "能听能说", "语音交互应用", "语音助理"],
+      "note": "APP Build 的典型形态：听（asr）+ 说（tts），中间的对话由 agent 自己承担"
     },
     {
       "id": "meeting-minutes",
@@ -153,7 +160,7 @@
       "id": "doc-audiobook",
       "name_cn": "文档转有声书",
       "stages": ["mineru", "tts"],
-      "keywords": ["有声书", "朗读文档", "读这本", "读这个 pdf", "念这份文档", "能朗读的"]
+      "keywords": ["有声书", "朗读文档", "读这本", "读这个 pdf", "念这份文档", "能朗读的", "读出来的小工具", "把 pdf 读", "文档朗读应用"]
     },
     {
       "id": "image-text-speech",
@@ -179,6 +186,13 @@
       "stages": ["txt2video", "tts"],
       "keywords": ["带配音的视频", "视频加解说", "生成视频并配音"]
     }
+  ],
+
+  "_synthesis_doc": "内容合成类需求（PRD / 培训材料 / 学习路径）：产出物是散文文档，没有可安装的本地 skill，也没有 [SKILL_RESULT] 可产出。真正干活的是 agent 自己的写作能力；skill 唯一能做的是用 openvino-content-fetch 抓真实 notebook/示例当素材。命中后路由到 scope=synthesize —— 绝不要去装任何 preset skill，也不要搭环境 / 下载模型 / 部署服务。",
+  "synthesis_signals": [
+    { "id": "prd",           "name_cn": "PRD / 产品需求文档", "keywords": ["prd", "产品需求文档", "需求文档", "写个需求", "产品方案", "功能规格"] },
+    { "id": "training",      "name_cn": "培训材料 / 教学讲解", "keywords": ["培训材料", "培训讲解", "教学材料", "讲解材料", "课件", "给团队讲", "内训", "培训"] },
+    { "id": "learning-path", "name_cn": "学习路径规划",       "keywords": ["学习路径", "从哪开始", "怎么入门", "学习计划", "该学什么", "入门顺序", "循序渐进", "该从哪"] }
   ],
 
   "_gap_signals_doc": "14 个预设原子能力覆盖不到的能力。命中时不代表要放弃预设能力：能被预设覆盖的阶段照常用预设原子，只有这些缺口阶段才参考 dev skill 单独开发（route 用 gaps= 字段返回）。",

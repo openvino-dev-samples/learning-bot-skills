@@ -99,7 +99,24 @@ def _has_dev_phrase(t):
     return any(w in t for w in ("下载模型", "找模型", "download model",
                                 "搭环境", "配置环境", "安装环境", "配好环境",
                                 "基准测试", "benchmark", "找瓶颈", "量化",
-                                "notebook", "教程", "学习路径"))
+                                "notebook", "教程"))
+
+
+def _match_synthesis(reg, t):
+    """内容合成类需求（PRD / 培训材料 / 学习路径）：产出物是散文文档，没有可安装的 skill，
+    也没有 [SKILL_RESULT] 可产出 —— 真正干活的是 agent 自己的写作能力，skill 只能用
+    content-fetch 抓真实 notebook/示例当素材。
+
+    返回命中的 deliverable id；未命中返回 None。
+
+    注意：'学习路径' 曾经在 _has_dev_phrase() 里，现已移到这里统一管，避免两处打架。
+    """
+    best, best_sc = None, 0
+    for s in reg.get("synthesis_signals", []):
+        sc = _score(t, s.get("keywords", []))
+        if sc > best_sc:
+            best, best_sc = s, sc
+    return best["id"] if best else None
 
 
 def _assist_for(t):
@@ -149,6 +166,19 @@ def route(reg, text):
     if any(m in t for m in non_intel_markers):
         return {"scope": "clarify", "target": "", "matched": "false",
                 "reason": "仅支持 Intel AIPC (Windows)；当前输入提到非 Intel 硬件，请确认硬件平台"}
+
+    # 内容合成类（PRD / 培训材料 / 学习路径）必须在 combo / preset / dev 之前判定。
+    # 否则「给一个端侧会议纪要总结功能写个 PRD」里的"会议纪要"会先被 combo 抢走，
+    # 路由成 preset/asr —— 用户要的是一份文档，弱 agent 却跑去装 ASR skill 做推理。
+    deliverable = _match_synthesis(reg, t)
+    if deliverable:
+        return {
+            "scope": "synthesize", "target": "openvino-content-fetch", "targets": [],
+            "assist": [], "gaps": [], "deliverable": deliverable, "matched": "true",
+            "reason": ("内容合成类需求：用 content-fetch 抓真实 notebook/示例做素材，"
+                       "正文由 agent 自己写并标注来源；不要安装任何 preset skill，"
+                       "也不要搭环境 / 下载模型 / 部署服务"),
+        }
 
     # Score every preset skill by keyword hits.
     preset_hits = []
@@ -201,8 +231,9 @@ def route(reg, text):
     order = {s["key"]: s.get("flow_order", 5) for s in reg["preset_skills"]}
 
     def _finish(res):
-        """统一补上 assist / gaps / targets 三个字段。"""
+        """统一补上 targets / assist / gaps / deliverable 四个字段。"""
         res.setdefault("targets", [])
+        res.setdefault("deliverable", "")   # 只有 scope=synthesize 才非空
         merged = list(assist)
         # 有缺口就必须把 FETCH/PIPE 带上：缺口阶段要找模型 + 自己接进流水线。
         if gaps:
@@ -294,6 +325,7 @@ def cmd_route(reg, text):
         ("scope", r["scope"]),
         ("target", r["target"]),
         ("targets", ",".join(r.get("targets") or [])),
+        ("deliverable", r.get("deliverable") or ""),
         ("assist", ",".join(r.get("assist") or [])),
         ("gaps", ",".join(r.get("gaps") or [])),
         ("reason", r["reason"]),
