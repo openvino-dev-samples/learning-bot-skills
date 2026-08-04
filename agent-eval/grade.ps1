@@ -50,12 +50,16 @@ foreach ($line in (Get-Content $Cases -Encoding UTF8)) {
 $verdicts = @{}
 foreach ($line in (Get-Content $Transcript -Encoding UTF8)) {
   if ($line -notmatch '\[EVAL_VERDICT\]') { continue }
-  $v = @{ case = ""; scope = ""; target = ""; invoked = "" }
+  $v = @{ case = ""; scope = ""; target = ""; targets = ""; gaps = ""; invoked = "" }
+  # 注意：targets= 里含有子串 target=，所以 target= 必须用 (?<!s) 把 targets 的尾巴排除掉，
+  # 否则两个字段会互相串味。
+  if ($line -match 'case=(\S+)')            { $v.case    = $Matches[1] }
+  if ($line -match 'scope=(\S*)')           { $v.scope   = $Matches[1] }
+  if ($line -match 'targets=([^\s]*)')      { $v.targets = $Matches[1] }
+  if ($line -match '(?<!s)\btarget=(\S*)')  { $v.target  = $Matches[1] }
+  if ($line -match 'gaps=([^\s]*)')         { $v.gaps    = $Matches[1] }
   # invoked 在最后且可能含空格，所以单独匹配到行尾。
-  if ($line -match 'case=(\S+)')    { $v.case    = $Matches[1] }
-  if ($line -match 'scope=(\S*)')   { $v.scope   = $Matches[1] }
-  if ($line -match 'target=(\S*)')  { $v.target  = $Matches[1] }
-  if ($line -match 'invoked=(.*)$') { $v.invoked = $Matches[1].Trim() }
+  if ($line -match 'invoked=(.*)$')         { $v.invoked = $Matches[1].Trim() }
   if ($v.case) { $verdicts[$v.case] = $v }
 }
 
@@ -89,6 +93,24 @@ foreach ($id in $order) {
   # target 断言（期望为空时不检查）。
   if ($c.expect_target -and ($v.target -ne $c.expect_target)) {
     $problems += "target=$($v.target), expected $($c.expect_target)"
+  }
+
+  # expect_targets：组合链必须**有序**且完全一致 —— 顺序错了（如 tts 排在 mineru 前面）
+  # 就是错的，这正是「预设能力当积木」要守住的东西。
+  if ($c.PSObject.Properties.Name -contains 'expect_targets' -and $c.expect_targets) {
+    if ($v.targets -ne $c.expect_targets) {
+      $problems += "targets=$($v.targets), expected $($c.expect_targets)"
+    }
+  }
+
+  # expect_gaps：链条上预设原子覆盖不到的阶段必须被如实标出来，
+  # 而不是假装能做，也不是因此放弃整条链。
+  if ($c.PSObject.Properties.Name -contains 'expect_gaps' -and $c.expect_gaps) {
+    foreach ($g in ($c.expect_gaps -split ',')) {
+      if ($v.gaps -notmatch [regex]::Escape($g.Trim())) {
+        $problems += "gaps=$($v.gaps), expected to contain $($g.Trim())"
+      }
+    }
   }
 
   # must_not：这些 key 不允许出现在 target 里。

@@ -88,6 +88,36 @@ foreach ($k in $presetCases.Keys) {
 }
 
 Write-Host ""
+Write-Host "4b. Routing: composite requests chain preset atoms (scope=compose)" -ForegroundColor White
+# 核心原则的回归测试：14 个预设能力是原子积木。需要多个能力的请求必须组合成一条有序链，
+# 而不是截断成单个 preset，更不是因为「没有单个 skill 能做」就整个甩给开发类 skill。
+$composeCases = @{
+  "把这张图里的文字提取出来，然后读给我听"   = "ocr-npu,tts"
+  "把这段英文录音转成文字再翻译成中文"       = "asr,realtime-translator"
+  "把这本扫描版 PDF 转成能朗读的有声书"      = "mineru,tts"
+  "根据这段描述生成一张图，再把它变清晰放大" = "txt2img,sr"
+  "帮我做一个开会用的实时字幕助手"           = "asr,realtime-translator"
+}
+foreach ($k in $composeCases.Keys) {
+  $want = $composeCases[$k]
+  $out = & $Py $Bot --route $k 2>&1 | Out-String
+  Check "route '$k' -> scope=compose"  { $out -match "scope=compose" }
+  Check "route '$k' -> targets=$want"  { $out -match ("targets=" + [regex]::Escape($want) + "\r?\n") }
+}
+
+# 「部署成服务」不再整个交给 PIPE：主体仍用预设原子能力，PIPE 只进 assist。
+$svc = & $Py $Bot --route "把 whisper→LLM→TTS 组成流水线并部署成服务" 2>&1 | Out-String
+Check "deploy request -> scope=compose"       { $svc -match "scope=compose" }
+Check "deploy request -> targets=asr,tts"     { $svc -match "targets=asr,tts\r?\n" }
+Check "deploy request -> PIPE only assists"   { $svc -match "assist=[^\r\n]*openvino-pipeline-optimization" }
+
+# 链条有缺口时：能覆盖的阶段照常用预设原子，缺口用 gaps= 交出去单独开发。
+$gap = & $Py $Bot --route "把这段录音转成文字，并区分是谁在说话" 2>&1 | Out-String
+Check "gap request -> covered stage still preset"     { $gap -match "targets=[^\r\n]*asr" }
+Check "gap request -> uncovered stage in gaps"        { $gap -match "gaps=[^\r\n]*speaker-id" }
+Check "gap request -> FETCH offered to build the gap" { $gap -match "assist=[^\r\n]*openvino-content-fetch" }
+
+Write-Host ""
 Write-Host "5. Routing: non-preset (dev) inputs map to ENV/FETCH/PIPE" -ForegroundColor White
 $devCases = @{
   "帮我在 Intel 笔记本上搭环境配置 OpenVINO" = "openvino-environment-management"

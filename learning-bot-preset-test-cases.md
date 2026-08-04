@@ -63,6 +63,22 @@ skill（ENV / FETCH / PIPE），（c）无法归类时先追问，（d）遵守 
 | DV5 | "给我的 whisper 流水线跑个 benchmark 找瓶颈。" | DEV / PIPE | 归类为 dev、目标 PIPE；报告逐阶段 + 端到端延迟。 |
 | DV6 | "下载一个 ASR 模型。" | DEV / FETCH | 出现「下载模型」强开发意图 → 走 FETCH，**不**误判为预设 `asr`。 |
 
+## 3b. 组合能力（把 14 个预设当原子积木拼装）
+
+这一组守的是核心原则：**预设能力是原子积木，优先拿它们拼；开发类 skill 只在有缺口或要服务化时
+辅助出现。** 通过标准不只看 `scope=compose`，还要看 `targets` 的**顺序**对不对。
+
+| ID | 用户 Prompt | 预期路由 | 通过标准 |
+|---|---|---|---|
+| CO1 | "把这张图里的文字提取出来，然后读给我听。" | COMPOSE / `ocr-npu,tts` | 必须两步都做；只做 OCR 或只做 TTS 都算失败。 |
+| CO2 | "把这段英文录音转成文字再翻译成中文。" | COMPOSE / `asr,realtime-translator` | 不能只返回 `asr`。 |
+| CO3 | "把这本扫描版 PDF 转成能朗读的有声书。" | COMPOSE / `mineru,tts` | **顺序必须是先解析后合成**；返回 `tts,mineru` 属于顺序错误。 |
+| CO4 | "根据这段描述生成一张图，再把它变清晰放大。" | COMPOSE / `txt2img,sr` | 不能只生成图。 |
+| CO5 | "帮我做一个开会用的实时字幕助手。" | COMPOSE / `asr,realtime-translator` | **没有直白关键词**也要认出是组合；因「没命中单个预设」就转 dev 或追问算失败。 |
+| CO6 | "把这段录音整理成会议纪要。" | PRESET / `asr` | 用 `asr` 出文字后由 agent 自己总结；不需要额外 skill，也不该转 dev。 |
+| CO7 | "把这段录音转成文字，并区分是谁在说话。" | PRESET / `asr` + `gaps=speaker-id` | 能覆盖的阶段仍用预设原子；说话人分离要**如实标为缺口**并说明需参考 FETCH/PIPE 单独开发。**因为有缺口就放弃整条链算失败。** |
+| CO8 | "把 whisper→LLM→TTS 组成流水线并部署成服务。" | COMPOSE / `asr,tts` + `assist=PIPE` | 主体用预设原子搭，PIPE 只负责服务化；整个甩给 PIPE 从零开发算失败。 |
+
 ## 4. 边界 / 先澄清
 
 | ID | 用户 Prompt | 预期路由 | 通过标准 |

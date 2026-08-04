@@ -13,7 +13,7 @@
 评测结论，格式严格如下（全部 ASCII，不要加粗、不要放进代码块、不要翻译 key）：
 
 ```
-[EVAL_VERDICT] case=<用例ID> scope=<preset|dev|clarify|menu|refuse> target=<skill key 或留空> invoked=<你实际执行的命令原文，没执行则写 none>
+[EVAL_VERDICT] case=<用例ID> scope=<preset|compose|dev|clarify|menu|refuse> target=<skill key 或留空> targets=<有序链，逗号分隔> gaps=<缺口 id，逗号分隔> invoked=<你实际执行的命令原文，没执行则写 none>
 ```
 
 字段含义：
@@ -21,9 +21,20 @@
 | 字段 | 填什么 |
 |---|---|
 | `case` | 用户消息开头给你的用例 ID（如 `PR1`）。没给就填 `none` |
-| `scope` | 你对这次请求的归类：`preset`（命中 14 个本地能力之一）/ `dev`（转 ENV/FETCH/PIPE）/ `clarify`（先追问）/ `menu`（输出能力清单）/ `refuse`（超出边界，明确拒绝） |
-| `target` | `preset` 时填 skill key（如 `asr`、`ocr-npu`）；`dev` 时填完整 skill 名（如 `openvino-content-fetch`）；其余留空 |
+| `scope` | 你对这次请求的归类：`preset`（一个本地能力就够）/ `compose`（**需要把多个本地能力串成一条链**）/ `dev`（产出物是开发资产，转 ENV/FETCH/PIPE）/ `clarify`（先追问）/ `menu`（输出能力清单）/ `refuse`（超出边界，明确拒绝） |
+| `target` | `preset` 时填 skill key（如 `asr`）；`compose` 时填**链首**那个 key；`dev` 时填完整 skill 名（如 `openvino-content-fetch`）；其余留空 |
+| `targets` | `compose` 时填**有序**的完整链条，逗号分隔且**不加空格**（如 `mineru,tts`）。顺序就是执行顺序，顺序错了算错。`preset` 时填那一个 key；其余留空 |
+| `gaps` | 这条链里 14 个本地能力**覆盖不到**、需要参考 FETCH/PIPE 单独开发的阶段（如 `speaker-id`）。没有就留空 |
 | `invoked` | 你**真正执行过**的命令原文。只是打算执行、或根本没执行，一律写 `none` |
+
+关于 `compose` 和 `gaps` 的补充要求：
+
+- 14 个本地能力是**原子积木**。一个需求如果单个能力做不完，先想**能不能拼**，
+  而不是立刻转给开发类 skill。能拼就填 `scope=compose` 和有序的 `targets`。
+- 链条上有某一段没有现成 skill 时，**不要放弃整条链**：能覆盖的阶段照常用本地能力填进 `targets`，
+  覆盖不到的那段填进 `gaps`。
+- 只有当需求的**产出物本身就是开发资产**（环境 / notebook / 模型文件 / 量化 IR / 性能报告）时，
+  才填 `scope=dev`。
 
 硬性要求：
 
