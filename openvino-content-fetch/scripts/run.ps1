@@ -22,10 +22,26 @@ param(
   [string]$OutDir,
   [ValidateSet("preset","preflight","clarify","all")][string]$Questions,
   [switch]$Status,
-  [switch]$ShowDebug
+  [switch]$ShowDebug,
+  [Parameter(ValueFromRemainingArguments=$true)][string[]]$Rest
 )
 
 $ErrorActionPreference = "Stop"
+
+# ---------------- 未知参数守卫 ----------------
+# PowerShell 会静默丢弃它不认识的 --xxx 写法，脚本仍照常往下跑并返回 0。对 agent 来说
+# 这等于「参数生效了」，是最危险的一类假成功。这里显式报错并停下。
+if ($Rest -and $Rest.Count -gt 0) {
+  Write-Host "[SKILL_RESULT]"
+  Write-Host "status=error"
+  Write-Host "skill=openvino-content-fetch"
+  Write-Host "reason=unknown-argument"
+  Write-Host ("unknown=" + ($Rest -join " "))
+  Write-Host "valid_params=-Source github|modelscope|csdn|all | -Download <model-id> | -OutDir <path> | -Questions preset|preflight|clarify|all | -China | -Status | -ShowDebug | -RepoDir <path> | -Out <file>"
+  Write-Host "note=unrecognized argument; nothing was executed"
+  Write-Host "[/SKILL_RESULT]"
+  exit 1
+}
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $Base      = Join-Path $env:USERPROFILE ".openvino"
 $VenvDir   = Join-Path $Base "venv-contentfetch"
@@ -44,6 +60,18 @@ function Emit-Result($kv) {
 function Get-Python {
   if (Test-Path (Join-Path $VenvDir "Scripts\python.exe")) {
     return (Join-Path $VenvDir "Scripts\python.exe")
+  }
+  # 没有 venv 时退回系统 python，但必须先确认它真的存在，否则 agent 看到的是 PowerShell 的
+  # CommandNotFoundException，而不是「该先去装 Python」这个可执行的结论。
+  if (-not (Get-Command python -ErrorAction SilentlyContinue)) {
+    Write-Host "[SKILL_RESULT]"
+    Write-Host "status=error"
+    Write-Host "skill=openvino-content-fetch"
+    Write-Host "reason=python-not-found"
+    Write-Host "next=openvino-environment-management"
+    Write-Host "note=python is not on PATH and no venv exists; run the environment-management skill first"
+    Write-Host "[/SKILL_RESULT]"
+    exit 1
   }
   return "python"
 }

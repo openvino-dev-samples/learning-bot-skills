@@ -26,10 +26,42 @@ param(
   [ValidateSet("preset","preflight","clarify","all")][string]$questions,
   [switch]$status,
   [switch]$stop,
-  [switch]$debug
+  # 注意：不能叫 $debug —— 一旦 param() 里出现 [Parameter()] 特性，PowerShell 就把脚本当成
+  # 高级函数处理并自动加入 -Debug 等公共参数，与自定义的 -debug 冲突（"A parameter with the
+  # name 'Debug' was defined multiple times"），整个脚本会加载失败。文档里的 --debug 通过下面
+  # 的归一化映射到这里。content-fetch 的 run.ps1 用的也是 -ShowDebug，保持一致。
+  [switch]$showdebug,
+  [Parameter(ValueFromRemainingArguments=$true)][string[]]$Rest
 )
 
 $ErrorActionPreference = "Stop"
+
+# ---------------- 参数归一化 + 未知参数守卫 ----------------
+# 背景：PowerShell 只按 -name 绑定参数。SKILL.md / README / questions.json 里到处写的
+# `--dry-run` 既不匹配 -dryrun，也不占位置参数 —— 它会被 PowerShell **静默丢弃**，于是本该
+# 「只解析不下载」的调用变成完整跑一遍（clone 仓库 + 建 venv + 装数 GB + 导出 IR + benchmark）。
+# 这里显式把带连字符的写法归一化，并对任何仍无法识别的参数直接报错，绝不静默继续。
+$ValidParams = "--slug <name> | --goal <text> | --device NPU|GPU|CPU | --precision INT4|INT8|FP16 | --china | --dry-run | --serve [--port N] | --questions preset|preflight|clarify|all | --status | --stop | --debug"
+
+if ($Rest) {
+  $unknown = @()
+  foreach ($a in $Rest) {
+    if     ($a -match '^--?dry-run$') { $dryrun    = $true }
+    elseif ($a -match '^--debug$')    { $showdebug = $true }
+    else                              { $unknown  += $a }
+  }
+  if ($unknown.Count -gt 0) {
+    Write-Host "[SKILL_RESULT]"
+    Write-Host "status=error"
+    Write-Host "skill=openvino-pipeline-optimization"
+    Write-Host "reason=unknown-argument"
+    Write-Host ("unknown=" + ($unknown -join " "))
+    Write-Host "valid_params=$ValidParams"
+    Write-Host "note=unrecognized argument; nothing was executed"
+    Write-Host "[/SKILL_RESULT]"
+    exit 1
+  }
+}
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $Base      = Join-Path $env:USERPROFILE ".openvino"
 $VenvDir   = Join-Path $Base "venv-pipeopt"
@@ -55,6 +87,19 @@ function Emit-Result($kv) {
 function Get-Python {
   if (Test-Path (Join-Path $VenvDir "Scripts\python.exe")) {
     return (Join-Path $VenvDir "Scripts\python.exe")
+  }
+  # 没有 venv 时退回系统 python，但必须先确认它真的存在。直接返回字符串 "python" 会让后面
+  # 的调用抛出 PowerShell 原生的 CommandNotFoundException —— agent 看到的是一段与本技能
+  # 无关的报错，而不是「该先去装 Python」这个可执行的结论。
+  if (-not (Get-Command python -ErrorAction SilentlyContinue)) {
+    Write-Host "[SKILL_RESULT]"
+    Write-Host "status=error"
+    Write-Host "skill=openvino-pipeline-optimization"
+    Write-Host "reason=python-not-found"
+    Write-Host "next=openvino-environment-management"
+    Write-Host "note=python is not on PATH and no venv exists; run the environment-management skill first"
+    Write-Host "[/SKILL_RESULT]"
+    exit 1
   }
   return "python"
 }
@@ -101,7 +146,7 @@ if ($stop) {
   exit 0
 }
 
-if ($debug) {
+if ($showdebug) {
   Log "Base dir      : $Base"
   Log "venv          : $VenvDir  (exists=$(Test-Path $VenvDir))"
   Log "notebooks repo: $RepoDir  (exists=$(Test-Path $RepoDir))"
@@ -136,9 +181,24 @@ if ($china) {
 # Resolve discovers stages from notebooks/<slug>/, and deps come from each notebook's own
 # requirements.txt, so the repo must exist first. Shallow clone; LFS blobs skipped.
 $env:GIT_LFS_SKIP_SMUDGE = "1"
-if (-not (Test-Path (Join-Path $RepoDir "notebooks"))) {
+$repoPresent = Test-Path (Join-Path $RepoDir "notebooks")
+
+# --dry-run 的契约是「仅解析 + 规划，不下载」。克隆 openvino_notebooks 是几百 MB 的下载，
+# 所以 dry-run 下绝不克隆：仓库已在本地就用它解析，不在就让 resolve_pipeline.py 如实返回
+# repo-required（它不会编造 plan），由下面把这个结论翻译成可执行的提示。
+if ($dryrun) {
+  if ($repoPresent) {
+    Log "--dry-run: using the already-cloned notebooks repo (no download)."
+  } else {
+    Log "--dry-run: notebooks repo not present; skipping clone by design (no download)."
+  }
+} elseif (-not $repoPresent) {
   Log "Cloning openvino_notebooks (shallow, latest) ..."
   & git clone --depth 1 --branch latest $RepoUrl $RepoDir
+  if ($LASTEXITCODE -ne 0) {
+    Emit-Result([ordered]@{ status="error"; reason="clone-failed"; note="could not clone $RepoUrl"; hint="check network or pass --china" })
+    exit 1
+  }
 } else {
   Log "Updating notebooks repo ..."
   & git -C $RepoDir pull --ff-only 2>$null
@@ -159,7 +219,18 @@ if ($dryrun)    { $resolveArgs += @("--dry-run") }
 Log "Resolving pipeline..."
 & $py0 @resolveArgs
 if ($LASTEXITCODE -ne 0) {
-  Emit-Result([ordered]@{ status="error"; note="could not resolve pipeline (see above)" })
+  if ($dryrun -and -not $repoPresent) {
+    # 这是 --dry-run 的预期结果之一，不是意外故障：本地没有 notebooks 仓库，而 dry-run 不下载。
+    # 给出明确的下一步，而不是让 agent 对着一句 "could not resolve" 猜。
+    Emit-Result([ordered]@{
+      status = "error"
+      reason = "repo-required"
+      note   = "--dry-run does not download; openvino_notebooks is not cloned yet"
+      next   = "run the same command without --dry-run to clone and build, or clone it manually into $RepoDir"
+    })
+  } else {
+    Emit-Result([ordered]@{ status="error"; reason="resolve-failed"; note="could not resolve pipeline (see above)" })
+  }
   exit 1
 }
 
