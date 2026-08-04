@@ -62,18 +62,48 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "<REPO>\learning-bot\scripts
 （ENV / FETCH / PIPE）是**辅助**，负责补环境、找模型、做服务化，而不是一没命中预设就整个接管、
 从零开发。
 
+### 先看产出物是什么 —— 这决定了归属
+
+| 产出物 | 归属 | scope |
+|---|---|---|
+| 本地推理结果（文字 / 语音 / 图 / 视频 / 检测框） | 预设原子能力 | `preset` |
+| 可运行的**应用**（= 多个推理结果串起来） | 预设原子能力**组合** | `compose` |
+| **散文文档**（PRD / 培训材料 / 学习路径） | **agent 自己的写作能力**，skill 只提供素材 | `synthesize` |
+| 开发资产（环境 / notebook / 模型文件 / 量化 IR / 性能报告） | 开发类 skill | `dev` |
+
+> 物料上四个应用场景的对应关系：**APP Build → `compose`**；
+> **PRD Build / Customize Training / Learning Path Planning → `synthesize`**。
+> 后三者**不是** 14 个原子能力之外的第 15/16/17 个 skill —— 它们没有可安装的 skill、
+> 也没有 `[SKILL_RESULT]` 可产出，真正干活的是你的写作能力。
+
 ### 路由判断顺序（严格按此顺序）
 
 | # | 判断 | 结果 |
 |---|---|---|
 | 1 | 提到非 Intel 硬件（Mac / Apple Silicon 等）？ | `clarify` —— 先确认硬件平台 |
-| 2 | 需求的**产出物**是不是开发资产（环境 / notebook / 教程 / 模型文件 / 量化 IR / 性能报告）？ | `dev` —— 这类拿原子能力当不了基础 |
-| 3 | 能不能用**多个**原子能力**组合**做出来？ | `compose` —— 返回有序链 `targets` |
-| 4 | 能不能用**一个**原子能力做出来？ | `preset` |
-| 5 | 以上都不行 | `dev` / `clarify` |
+| 2 | 要的是**文档**（PRD / 培训材料 / 学习路径）？ | `synthesize` —— 见下节 |
+| 3 | 需求的**产出物**是不是开发资产（环境 / notebook / 教程 / 模型文件 / 量化 IR / 性能报告）？ | `dev` —— 这类拿原子能力当不了基础 |
+| 4 | 能不能用**多个**原子能力**组合**做出来？ | `compose` —— 返回有序链 `targets` |
+| 5 | 能不能用**一个**原子能力做出来？ | `preset` |
+| 6 | 以上都不行 | `dev` / `clarify` |
 
-**关键点：第 3 步排在第 4 步之前，第 3、4 步都排在「转交开发类 skill」之前。**
-只有第 2 步（产出物本身就是开发资产）和第 5 步才允许直接走开发类 skill。
+**关键点：第 4 步排在第 5 步之前，第 4、5 步都排在「转交开发类 skill」之前。**
+只有第 3 步（产出物本身就是开发资产）和第 6 步才允许直接走开发类 skill。
+
+**第 2 步为什么必须排这么靠前**：「给一个端侧会议纪要总结功能写个 PRD」里的「会议纪要」会命中
+组合配方，如果不先判定内容合成，就会被路由成 `preset/asr` —— 用户要的是一份文档，却跑去装
+ASR skill 做推理。
+
+### `synthesize` 的处理约定
+
+命中后返回 `scope=synthesize`、`target=openvino-content-fetch`、
+`deliverable=prd|training|learning-path`，`targets=` 为空（没有可执行的链条）。做法是：
+
+1. 用 `openvino-content-fetch` 抓**真实**的 OpenVINO notebook / 示例当素材（grounding）。
+2. **正文由你自己写** —— 结构化 PRD、培训讲解材料、循序渐进的学习路径。
+3. **标注来源** notebook / 示例，不要凭空编造。
+4. **不要**安装任何 preset skill、**不要**搭环境、**不要**下载模型、**不要**部署服务 ——
+   除非用户明确另外要求。这些是内容交付物，不是可运行的 demo。
 
 ### 链条上有缺口怎么办 —— `gaps=`
 
@@ -261,9 +291,10 @@ data=[{"key":..,"name":..,"question":..}, ...]
 status=ok
 action=route
 matched=true|false
-scope=preset|compose|dev|clarify
-target=<单个 key；compose 时为链首；clarify 时为空>
-targets=<有序逗号分隔的完整链条；dev/clarify 时为空>
+scope=preset|compose|synthesize|dev|clarify
+target=<单个 key；compose 时为链首；synthesize 时固定为 openvino-content-fetch；clarify 时为空>
+targets=<有序逗号分隔的完整链条；synthesize/dev/clarify 时为空>
+deliverable=<prd|training|learning-path；仅 synthesize 时非空>
 assist=<逗号分隔的辅助 dev skill；可为空>
 gaps=<逗号分隔的缺口 id：预设原子能力覆盖不到、需要单独开发的阶段；可为空>
 reason=<归类理由>

@@ -89,11 +89,19 @@ Feed each skill's `[SKILL_RESULT]` / findings into the next step. Selection exam
 
 ### Content synthesis (PRD / training material / learning path)
 
+`learning-bot -Route` reports these as **`scope=synthesize`** with
+`deliverable=prd|training|learning-path`, `target=openvino-content-fetch` and an empty `targets=`.
+
 For **PRD Build, Customize Training, and Learning Path** requests, run `openvino-content-fetch` to
 gather real OpenVINO notebooks/samples as grounding, then **you synthesize** the artifact yourself
 (structured PRD, training deck/walkthrough, or step-by-step learning path). Cite the source
-notebooks/samples. Do **not** set up an environment, download models, or serve anything unless the
-user explicitly asks — these are content deliverables, not runnable demos.
+notebooks/samples. Do **not** install a preset skill, set up an environment, download models, or
+serve anything unless the user explicitly asks — these are content deliverables, not runnable demos.
+
+These three are **not** extra local skills. There is nothing to install and no `[SKILL_RESULT]` to
+produce; the writing is your own work and the skill only supplies the source material. **APP Build
+is the opposite** — it is a runnable deliverable, so it goes through `scope=compose` and gets built
+out of the 14 atoms.
 
 
 ## State & recovery
