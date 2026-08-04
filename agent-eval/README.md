@@ -127,6 +127,7 @@ git config --global --get url."https://ghproxy.net/https://github.com/".insteadO
 
 | 文件 | 用途 |
 |---|---|
-| [`cases.jsonl`](cases.jsonl) | 29 条用例的**单一数据源**（id / prompt / 期望 scope+target / must_not / 通过标准） |
+| [`trae-autorun-prompt.md`](trae-autorun-prompt.md) | **一次粘贴、让 TRAE 自动跑完 L1+L3 的 prompt**（L2 不能自动化，原因见文内） |
+| [`cases.jsonl`](cases.jsonl) | 29 条用例的**单一数据源**（id / prompt / 期望 scope+target / must_not / 通过标准）。**这是答案卷：测试期间不得进入被测 agent 的上下文** |
 | [`harness-prompt.md`](harness-prompt.md) | 贴进 agent 规则的附加指令，让它输出可判分的 `[EVAL_VERDICT]` 行 |
 | [`grade.ps1`](grade.ps1) | 读 transcript + cases.jsonl，输出 pass/fail 与通过率 |
