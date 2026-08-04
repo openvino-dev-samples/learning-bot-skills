@@ -89,11 +89,49 @@ def _has_out_of_scope_signal(t):
 
 
 def _has_dev_phrase(t):
-    """强开发意图短语：'下载模型'/'搭环境' 这类连字串必须出现。"""
+    """纯开发意图短语：**产出物是开发资产**（环境 / notebook / 模型文件 / 量化 IR /
+    性能报告）时才算。这类需求没法拿 14 个预设原子能力当基础，只能直接走 dev skill。
+
+    注意：'部署 / 流水线 / pipeline / serve' 曾经在这个列表里，现在**故意移走**了 ——
+    「把 asr→llm→tts 组成流水线并部署成服务」是可以拿预设原子能力搭出来的，应当走
+    compose 并把 PIPE 当辅助（见 _assist_for），而不是整个交给 dev skill 从零开发。
+    """
     return any(w in t for w in ("下载模型", "找模型", "download model",
                                 "搭环境", "配置环境", "安装环境", "配好环境",
-                                "部署", "流水线", "pipeline", "基准测试", "benchmark",
+                                "基准测试", "benchmark", "找瓶颈", "量化",
                                 "notebook", "教程", "学习路径"))
+
+
+def _assist_for(t):
+    """辅助（不是接管）：预设原子能力仍是主体，这些 dev skill 只负责补缺口。"""
+    assist = []
+    if any(w in t for w in ("部署", "服务", "常驻", "流水线", "pipeline", "serve",
+                            "优化", "加速", "端到端")):
+        assist.append("openvino-pipeline-optimization")
+    if any(w in t for w in ("没装", "装不上", "环境", "第一次用", "还没配")):
+        assist.append("openvino-environment-management")
+    if any(w in t for w in ("缺模型", "没有模型", "换个模型", "换模型", "找个模型")):
+        assist.append("openvino-content-fetch")
+    return assist
+
+
+def _match_combo(reg, t):
+    """配方表命中：覆盖「会议纪要」「字幕助手」这类没有直白关键词、单靠多命中兜不住的说法。
+    返回 (combo, 命中关键词数)；未命中返回 (None, 0)。"""
+    best, best_sc = None, 0
+    for c in reg.get("combos", []):
+        sc = _score(t, c.get("keywords", []))
+        if sc > best_sc:
+            best, best_sc = c, sc
+    return best, best_sc
+
+
+def _match_gaps(reg, t):
+    """缺口识别：这些能力 14 个预设原子覆盖不到，需要参考 dev skill 单独开发。
+    命中缺口**不等于**放弃预设能力 —— 能被预设覆盖的阶段照常用预设原子，
+    只有缺口阶段才单独开发。"""
+    return [g["id"] for g in reg.get("gap_signals", [])
+            if _score(t, g.get("keywords", [])) > 0]
 
 
 def route(reg, text):
@@ -147,14 +185,81 @@ def route(reg, text):
         or _has_out_of_scope_signal(t)
     )
 
+    # ------------------------------------------------------------------
+    # 核心原则：14 个预设 skill 是**原子能力**，优先拿它们当基础拼装；三个开发类 skill
+    # 只在预设能力搭不出来、或链条上有缺口时作为**辅助**出现。判断顺序：
+    #   1) 产出物是开发资产（环境/notebook/模型文件/量化IR/性能报告）→ dev
+    #   2) 命中配方表 → compose
+    #   3) 命中 ≥2 个不同预设原子 → compose（按 flow_order 排序）
+    #   4) 命中 1 个预设原子 → preset
+    #   5) 都没有 → dev / clarify
+    # 缺口（gap_signals）不会否决前面的结论：能被预设覆盖的阶段照常用预设原子，
+    # 缺口阶段单独走 dev 开发，由 gaps= 字段告诉 agent 哪几段要自己做。
+    # ------------------------------------------------------------------
+    assist = _assist_for(t)
+    gaps = _match_gaps(reg, t)
+    order = {s["key"]: s.get("flow_order", 5) for s in reg["preset_skills"]}
+
+    def _finish(res):
+        """统一补上 assist / gaps / targets 三个字段。"""
+        res.setdefault("targets", [])
+        merged = list(assist)
+        # 有缺口就必须把 FETCH/PIPE 带上：缺口阶段要找模型 + 自己接进流水线。
+        if gaps:
+            for k in ("openvino-content-fetch", "openvino-pipeline-optimization"):
+                if k not in merged:
+                    merged.append(k)
+        res["assist"] = merged
+        res["gaps"] = gaps
+        return res
+
     if preset_hits and not dev_override:
-        best = normalize_ocr(preset_hits[0][1])
-        return {"scope": "preset", "target": best, "matched": "true",
-                "reason": f"命中预设本地能力关键词（{preset_hits[0][0]} 个）"}
+        # 2) 配方表优先 —— 它把 stages 顺序写死，比 flow_order 自动排序更可靠。
+        combo, combo_sc = _match_combo(reg, t)
+        if combo and combo_sc > 0:
+            stages = list(combo["stages"])
+            return _finish({
+                "scope": "compose" if len(stages) > 1 else "preset",
+                "target": stages[0], "targets": stages, "matched": "true",
+                "reason": f"命中组合配方「{combo['name_cn']}」，以预设原子能力为基础拼装",
+            })
+
+        # 3) 多原子命中 → 组合。先按 key 去重（OCR 的 npu/gpu 变体归一成一个）。
+        seen, keys = set(), []
+        for _sc, k in preset_hits:
+            nk = normalize_ocr(k)
+            if nk not in seen:
+                seen.add(nk)
+                keys.append(nk)
+        if len(keys) > 1:
+            stages = sorted(keys, key=lambda k: (order.get(k, 5), keys.index(k)))
+            return _finish({
+                "scope": "compose", "target": stages[0], "targets": stages,
+                "matched": "true",
+                "reason": f"命中 {len(stages)} 个预设原子能力，按数据流顺序组合",
+            })
+
+        # 4) 单原子
+        return _finish({
+            "scope": "preset", "target": keys[0], "targets": [keys[0]],
+            "matched": "true",
+            "reason": f"命中预设本地能力关键词（{preset_hits[0][0]} 个）",
+        })
+
+    # 配方表也能救回「一个预设关键词都没命中」的说法（如「帮我做个会议助手」）。
+    if not dev_override:
+        combo, combo_sc = _match_combo(reg, t)
+        if combo and combo_sc > 0:
+            stages = list(combo["stages"])
+            return _finish({
+                "scope": "compose" if len(stages) > 1 else "preset",
+                "target": stages[0], "targets": stages, "matched": "true",
+                "reason": f"命中组合配方「{combo['name_cn']}」，以预设原子能力为基础拼装",
+            })
 
     if dev_hits:
-        return {"scope": "dev", "target": dev_hits[0][1], "matched": "true",
-                "reason": "超出预设本地能力，匹配到开发类 skill"}
+        return _finish({"scope": "dev", "target": dev_hits[0][1], "matched": "true",
+                        "reason": "产出物是开发资产，预设原子能力无法作为基础"})
 
     # dev_override 命中但 dev 关键词未命中：路由到最贴近的 dev skill（由 agent 解释边界）
     if dev_override:
@@ -165,25 +270,32 @@ def route(reg, text):
         else:
             target = "openvino-environment-management"
             reason = "检测到越界/批处理/造假等强信号 → 路由到 ENV 由 agent 解释边界"
-        return {"scope": "dev", "target": target, "matched": "true", "reason": reason}
+        return _finish({"scope": "dev", "target": target, "matched": "true",
+                        "reason": reason})
 
     if preset_hits:
         best = normalize_ocr(preset_hits[0][1])
-        return {"scope": "preset", "target": best, "matched": "true",
-                "reason": "命中预设本地能力关键词"}
+        return _finish({"scope": "preset", "target": best, "targets": [best],
+                        "matched": "true", "reason": "命中预设本地能力关键词"})
 
-    return {"scope": "clarify", "target": "", "matched": "false",
-            "reason": "无法可靠归类，建议先向用户追问具体任务 / 模态 / 目标"}
+    return _finish({"scope": "clarify", "target": "", "matched": "false",
+                    "reason": "无法可靠归类，建议先向用户追问具体任务 / 模态 / 目标"})
 
 
 def cmd_route(reg, text):
     r = route(reg, text)
+    # target= 保留为「单个 key / 链首」，老的只读 target 的解析方不会炸；
+    # targets= 是有序的完整链条，assist= 是辅助的 dev skill，gaps= 是预设覆盖不到、
+    # 需要参考 dev skill 单独开发的阶段。
     emit([
         ("status", "ok"),
         ("action", "route"),
         ("matched", r["matched"]),
         ("scope", r["scope"]),
         ("target", r["target"]),
+        ("targets", ",".join(r.get("targets") or [])),
+        ("assist", ",".join(r.get("assist") or [])),
+        ("gaps", ",".join(r.get("gaps") or [])),
         ("reason", r["reason"]),
     ])
 
