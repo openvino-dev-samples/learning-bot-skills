@@ -1,0 +1,14 @@
+{
+  "_doc": "模型显存/内存占用的估算参数。做成数据而不是写死在代码里，方便按实测调整。INT4 取 0.55 而非理论值 0.5，是要算上 scales/zero-points 的额外开销；runtime_overhead_gb 覆盖 OpenVINO 运行时、编译缓存和中间激活。宁可偏保守把边界情况判成跑不动，也不要让用户下完几个 GB 才发现 OOM。",
+  "default_precision": "INT4",
+  "bytes_per_param": {
+    "INT4": 0.55,
+    "INT8": 1.05,
+    "FP16": 2.0,
+    "FP32": 4.0
+  },
+  "runtime_overhead_gb": 1.2,
+  "safety_margin": 0.85,
+  "known_param_tiers": [0.5, 1.5, 2, 3, 4, 7, 8, 9, 13, 14, 15, 32, 70],
+  "_alternatives_doc": "跑不动时按这个顺序找替代：先降精度（FP16->INT8->INT4），再降参数量档位（known_param_tiers 里比当前小的），最后建议改用 CPU（系统内存通常比显存预算大，但更慢）。只给算下来真的能跑的方案，算不出来就留空，不要编。"
+}

@@ -17,6 +17,8 @@ import argparse
 import io
 import json
 import os
+import re
+import subprocess
 import sys
 import zipfile
 from pathlib import Path
@@ -436,6 +438,164 @@ def cmd_install(reg, key, out_dir):
         return 1
 
 
+# --------------------------------------------------------------------------
+# 本机资源与模型可行性
+#
+# 目的：别推荐一个本机根本装不下的模型（8GB 预算跑不了 15B）。
+# 真正的硬件探测在 detect_resources.ps1 里（要问 OpenVINO 拿显存），这里只做两件事：
+# 读它写下的缓存，以及按 model_sizing.json 的系数算账。
+#
+# 注意这里刻意**不**自动触发探测：--menu / --route 必须保持纯 stdlib、离线、零 IO 依赖。
+# 只有显式调用 --capacity 才会去探测。
+# --------------------------------------------------------------------------
+
+SIZING_FILE = HERE / "model_sizing.json"
+CAPACITY_CACHE = Path(os.path.expanduser("~")) / ".openvino" / "capacity.json"
+DETECT_SCRIPT = HERE / "detect_resources.ps1"
+
+
+def load_sizing():
+    with open(SIZING_FILE, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def load_capacity():
+    """读探测缓存；没有就返回 None —— 调用方必须能在没有缓存时正常工作。"""
+    try:
+        with open(CAPACITY_CACHE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return None
+
+
+def parse_model_spec(model_id):
+    """从 model id 里解析参数量和精度，例如 Qwen2.5-7B-Instruct-INT4-OV -> (7.0, INT4)。
+
+    解析不出来就返回 None，由调用方去用默认值 —— 不要瞎猜一个数字当成事实。
+    注意 '2.5' 这种版本号不能被当成参数量，所以要求 B 前面是数字且紧跟边界。
+    """
+    params = None
+    m = re.search(r"(\d+(?:\.\d+)?)\s*[Bb](?![a-zA-Z])", model_id or "")
+    if m:
+        try:
+            params = float(m.group(1))
+        except ValueError:
+            params = None
+
+    precision = None
+    upper = (model_id or "").upper()
+    for p in ("INT4", "INT8", "FP16", "FP32"):
+        if p in upper:
+            precision = p
+            break
+    return params, precision
+
+
+def estimate_need_gb(params_b, precision, sizing):
+    """估算加载该模型需要多少 GB。"""
+    per = sizing["bytes_per_param"].get(precision)
+    if per is None or params_b is None:
+        return None
+    return round(params_b * per + sizing["runtime_overhead_gb"], 1)
+
+
+def suggest_alternatives(params_b, precision, budget_gb, sizing):
+    """跑不动时给真的能跑的替代方案；算不出来就返回空列表，不编。"""
+    if params_b is None or budget_gb is None:
+        return []
+    out = []
+
+    # 1) 先降精度
+    order = ["FP32", "FP16", "INT8", "INT4"]
+    if precision in order:
+        for lower in order[order.index(precision) + 1:]:
+            need = estimate_need_gb(params_b, lower, sizing)
+            if need is not None and need <= budget_gb:
+                out.append(f"{lower}:{need}GB")
+                break
+
+    # 2) 再降参数量档位（只考虑比当前小的）
+    for tier in sorted((t for t in sizing.get("known_param_tiers", []) if t < params_b),
+                       reverse=True):
+        need = estimate_need_gb(tier, precision, sizing)
+        if need is not None and need <= budget_gb:
+            out.append(f"{tier}B@{precision}:{need}GB")
+            break
+
+    return out
+
+
+def cmd_capacity():
+    """触发一次真实探测（会调 PowerShell），把结果原样透传出去。"""
+    if not DETECT_SCRIPT.exists():
+        emit([("status", "error"), ("skill", "learning-bot"), ("action", "capacity"),
+              ("reason", "detect-script-missing"),
+              ("note", f"expected {DETECT_SCRIPT}")])
+        return 1
+    try:
+        proc = subprocess.run(
+            ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass",
+             "-File", str(DETECT_SCRIPT)],
+            capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=300)
+    except Exception as e:
+        emit([("status", "error"), ("skill", "learning-bot"), ("action", "capacity"),
+              ("reason", "detect-failed"), ("note", f"{type(e).__name__}: {e}")])
+        return 1
+    sys.stdout.write(proc.stdout or "")
+    return proc.returncode
+
+
+def cmd_can_run(model, params_b, precision):
+    """判定某个模型在本机跑不跑得动。"""
+    sizing = load_sizing()
+    parsed_params, parsed_prec = parse_model_spec(model)
+
+    # 优先级：显式参数 > 从 model id 解析 > 默认（INT4，AIPC 部署的常态）
+    params_b = params_b if params_b is not None else parsed_params
+    precision = precision or parsed_prec or sizing["default_precision"]
+
+    cap = load_capacity()
+    fields = [("status", "ok"), ("skill", "learning-bot"), ("action", "can-run"),
+              ("model", model or ""), ("precision", precision)]
+
+    if params_b is None:
+        # 解析不出参数量就如实说不知道，不要拿一个编的数字去做判断。
+        fields += [("params_b", ""), ("fits", "unknown"),
+                   ("reason", "无法从 model id 解析参数量，请用 --params 显式指定")]
+        emit(fields)
+        return 0
+
+    need = estimate_need_gb(params_b, precision, sizing)
+    fields.append(("params_b", params_b))
+    fields.append(("need_gb", need if need is not None else ""))
+
+    if cap is None:
+        fields += [("budget_gb", ""), ("fits", "unknown"),
+                   ("next", "learning-bot --capacity"),
+                   ("reason", "尚未探测本机资源，先运行 --capacity 再判定")]
+        emit(fields)
+        return 0
+
+    budget = cap.get("usable_budget_gb")
+    fits = (need is not None and budget is not None and need <= budget)
+    fields += [("budget_gb", budget if budget is not None else ""),
+               ("capacity_source", cap.get("source", "")),
+               ("fits", "true" if fits else "false")]
+    if not fits:
+        alts = suggest_alternatives(params_b, precision, budget, sizing)
+        fields.append(("alternatives", ",".join(alts)))
+        fields.append(("reason",
+                       f"需要约 {need}GB，本机可用预算约 {budget}GB"
+                       + ("；可考虑 alternatives 里的方案" if alts
+                          else "；未找到能装下的替代方案，建议改用 CPU 或换更小的模型")))
+    else:
+        fields.append(("reason", f"需要约 {need}GB，本机可用预算约 {budget}GB，可以运行"))
+    if cap.get("source") == "estimate":
+        fields.append(("note", "capacity is an estimate (openvino unavailable); treat as advisory"))
+    emit(fields)
+    return 0
+
+
 def main():
     ap = argparse.ArgumentParser(description="Learning Bot launcher / router")
     g = ap.add_mutually_exclusive_group(required=True)
@@ -445,8 +605,21 @@ def main():
     g.add_argument("--questions", metavar="TYPE",
                    choices=["preset", "preflight", "clarify", "all"],
                    help="输出准备好的问题（preset/preflight/clarify/all），[SKILL_QUESTIONS] 契约")
+    g.add_argument("--capacity", action="store_true",
+                   help="探测本机内存/显存预算（会调用 OpenVINO，首次较慢）")
+    g.add_argument("--can-run", metavar="MODEL", dest="can_run",
+                   help="判定某模型在本机跑不跑得动（默认按 INT4 估算）")
     ap.add_argument("--out-dir", default=None, help="--install 的目标目录（默认 ~/.aipc-skills）")
+    ap.add_argument("--params", type=float, default=None,
+                    help="--can-run 的参数量（单位 B）；不给则从 model id 解析")
+    ap.add_argument("--precision", default=None, choices=["INT4", "INT8", "FP16", "FP32"],
+                    help="--can-run 的精度；不给则从 model id 解析，再不行用 INT4")
     args = ap.parse_args()
+
+    if args.capacity:
+        return cmd_capacity()
+    if args.can_run is not None:
+        return cmd_can_run(args.can_run, args.params, args.precision)
 
     reg = load_registry()
     if args.menu:

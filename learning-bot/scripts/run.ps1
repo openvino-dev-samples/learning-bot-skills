@@ -19,6 +19,10 @@ param(
   [string]$Route,
   [string]$Install,
   [string]$OutDir,
+  [switch]$Capacity,
+  [string]$CanRun,
+  [double]$Params,
+  [ValidateSet("INT4","INT8","FP16","FP32")][string]$Precision,
   [Parameter(ValueFromRemainingArguments=$true)][string[]]$Rest
 )
 
@@ -35,7 +39,7 @@ if ($Rest -and $Rest.Count -gt 0) {
   Write-Host "skill=learning-bot"
   Write-Host "reason=unknown-argument"
   Write-Host ("unknown=" + ($Rest -join " "))
-  Write-Host "valid_params=-Menu | -Questions preset|preflight|clarify|all | -Route <text> | -Install <key> [-OutDir <path>]"
+  Write-Host "valid_params=-Menu | -Questions preset|preflight|clarify|all | -Route <text> | -Install <key> [-OutDir <path>] | -Capacity | -CanRun <model> [-Params <n>] [-Precision INT4|INT8|FP16|FP32]"
   Write-Host "note=unrecognized argument; nothing was executed"
   Write-Host "[/SKILL_RESULT]"
   exit 1
@@ -72,6 +76,18 @@ if ($Questions) {
 }
 if ($Route) {
   & $py $Bot --route $Route
+  exit $LASTEXITCODE
+}
+if ($Capacity) {
+  & $py $Bot --capacity
+  exit $LASTEXITCODE
+}
+if ($CanRun) {
+  # -Params 未传时 PowerShell 会给 double 类型默认值 0，不能原样转发（会被当成 0B 模型）。
+  $crArgs = @($Bot, "--can-run", $CanRun)
+  if ($PSBoundParameters.ContainsKey("Params"))    { $crArgs += @("--params", "$Params") }
+  if ($PSBoundParameters.ContainsKey("Precision")) { $crArgs += @("--precision", $Precision) }
+  & $py @crArgs
   exit $LASTEXITCODE
 }
 if ($Install) {
