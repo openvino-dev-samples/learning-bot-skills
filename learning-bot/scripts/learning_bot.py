@@ -24,6 +24,16 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 REGISTRY = HERE / "skills_registry.json"
 
+# Windows 控制台默认使用系统 ANSI 代码页（cp1252 / cp936），而本脚本的 reason= 字段是中文。
+# 不强制 UTF-8 的话，print() 会抛 UnicodeEncodeError 并让进程以退出码 1 结束 —— 调用方看到的
+# 是「路由器崩溃」而不是路由结果。只有开了「Beta: 使用 UTF-8 提供全球语言支持」的机器才碰巧
+# 正常，绝不能依赖那个开关。errors="replace" 保证极端情况下也只是替换字符，不会中断输出。
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
 
 def load_registry():
     with open(REGISTRY, "r", encoding="utf-8") as f:

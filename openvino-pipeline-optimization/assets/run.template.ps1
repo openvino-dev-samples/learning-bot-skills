@@ -1,4 +1,4 @@
-# run.ps1 — fixed entry point (never rename)
+﻿# run.ps1 — fixed entry point (never rename)
 $ErrorActionPreference = 'Stop'
 
 $Root = Split-Path -Parent $PSScriptRoot          # skill root
@@ -20,7 +20,7 @@ if ($LASTEXITCODE -ne 0) { exit 1 }
 
 # --- 3. Resolve venv python -------------------------------------------------
 $infoPath = Join-Path $Root 'info.json'
-$info     = Get-Content $infoPath -Raw | ConvertFrom-Json
+$info     = Get-Content $infoPath -Raw -Encoding UTF8 | ConvertFrom-Json
 $venv     = Join-Path $env:USERPROFILE ".openvino\venv\$($info.venv_name)"
 $python   = Join-Path $venv 'Scripts\python.exe'
 

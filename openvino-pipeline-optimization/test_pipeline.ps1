@@ -1,4 +1,4 @@
-<#
+﻿<#
   Smoke test for the openvino-pipeline-optimization skill.
 
   Offline & hardware-free: exercises the orchestration logic (resolve -> optimize --dry-run ->
@@ -59,7 +59,7 @@ Write-Host "2. resolve_pipeline.py discovers stages from the synthetic repo" -Fo
 $resolveRc = $LASTEXITCODE
 Check "resolve exit 0"                 { $resolveRc -eq 0 }
 Check "plan.json written"             { Test-Path $plan }
-$planObj = if (Test-Path $plan) { Get-Content $plan -Raw | ConvertFrom-Json } else { $null }
+$planObj = if (Test-Path $plan) { Get-Content $plan -Raw -Encoding UTF8 | ConvertFrom-Json } else { $null }
 Check "resolve ok=true"               { $planObj -and $planObj.ok -eq $true }
 Check "discovered 2 stages"           { $planObj -and $planObj.stages.Count -eq 2 }
 Check "llm role present"              { $planObj -and ($planObj.stages.role -contains "llm") }
@@ -71,7 +71,7 @@ Write-Host "3. optimize.py --dry-run plans without downloading" -ForegroundColor
 Check "optimize exit 0"               { $LASTEXITCODE -eq 0 }
 $pipePlan = Join-Path $irDir "pipeline-plan.json"
 Check "pipeline-plan.json written"    { Test-Path $pipePlan }
-$ppObj = if (Test-Path $pipePlan) { Get-Content $pipePlan -Raw | ConvertFrom-Json } else { $null }
+$ppObj = if (Test-Path $pipePlan) { Get-Content $pipePlan -Raw -Encoding UTF8 | ConvertFrom-Json } else { $null }
 Check "stages marked would-build"     { $ppObj -and ($ppObj.stages.status -contains "would-build") }
 
 Write-Host ""

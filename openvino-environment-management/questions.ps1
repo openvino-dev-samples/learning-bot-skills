@@ -1,4 +1,4 @@
-<#
+﻿<#
   Prepared Questions emitter (shared, identical across skills).
 
   Reads questions.json next to this script and emits a machine-parsable
@@ -41,8 +41,17 @@ if (-not (Test-Path $QFile)) {
   exit 1
 }
 
-$all = Get-Content $QFile -Raw | ConvertFrom-Json
+# questions.json 是 UTF-8 无 BOM（Python 侧用 encoding="utf-8" 读，加 BOM 会让 json.load 失败），
+# 所以 PowerShell 这边必须显式声明编码：Windows PowerShell 5.1 的 Get-Content 默认按系统 ANSI
+# 代码页读取，在 cp1252 / cp936 机器上会把中文读成乱码，输出的问题清单随之全部损坏。
+$all = Get-Content $QFile -Raw -Encoding UTF8 | ConvertFrom-Json
 $skill = $all.skill
+
+# 同理，控制台输出也要强制 UTF-8，否则中文在送出时会被系统代码页再转一次。
+try {
+  $OutputEncoding = [System.Text.Encoding]::UTF8
+  [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+} catch { }
 
 if ($Type -eq "all") {
   $blocks = @($all.preset) + @($all.preflight) + @($all.clarify) | Where-Object { $_ }
