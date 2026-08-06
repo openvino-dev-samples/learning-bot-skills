@@ -1,4 +1,4 @@
-Set-ExecutionPolicy Bypass -Scope Process -Force
+﻿Set-ExecutionPolicy Bypass -Scope Process -Force
 
 Write-Host "=== Visual Studio Community 2022 安装 ===" -ForegroundColor Cyan
 

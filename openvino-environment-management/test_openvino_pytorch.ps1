@@ -1,4 +1,4 @@
-Set-ExecutionPolicy Bypass -Scope Process -Force
+﻿Set-ExecutionPolicy Bypass -Scope Process -Force
 
 Write-Host "=== OpenVINO 和 PyTorch 安装测试 ===" -ForegroundColor Cyan
 

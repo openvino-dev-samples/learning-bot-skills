@@ -1,4 +1,4 @@
-Set-ExecutionPolicy Bypass -Scope Process -Force
+﻿Set-ExecutionPolicy Bypass -Scope Process -Force
 
 Write-Host "=== CMake 安装 ===" -ForegroundColor Cyan
 

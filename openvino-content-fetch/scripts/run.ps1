@@ -1,4 +1,4 @@
-<#
+﻿<#
   OpenVINO Content Fetch — orchestrator.
 
   Fetches and parses notebooks, model lists, skills, and dev zone articles,

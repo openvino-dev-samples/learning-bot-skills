@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Intel AIPC Windows 开发环境配置脚本（ST1-ST9）。
 .DESCRIPTION

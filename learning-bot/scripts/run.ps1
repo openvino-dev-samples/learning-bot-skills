@@ -1,4 +1,4 @@
-<#
+﻿<#
   Learning Bot launcher - orchestrator entry point.
 
   Starts the Learning Bot: recommends the preset questions, routes a user utterance to a

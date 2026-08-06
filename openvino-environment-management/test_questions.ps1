@@ -1,4 +1,4 @@
-<#
+﻿<#
   Smoke test for the openvino-environment-management prepared questions.
 
   Offline & network-free: validates that questions.ps1 emits a well-formed [SKILL_QUESTIONS]

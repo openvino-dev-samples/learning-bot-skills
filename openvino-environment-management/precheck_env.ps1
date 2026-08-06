@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Intel AIPC 开发环境预检查脚本
 .DESCRIPTION

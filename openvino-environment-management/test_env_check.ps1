@@ -1,4 +1,4 @@
-Set-ExecutionPolicy Bypass -Scope Process -Force
+﻿Set-ExecutionPolicy Bypass -Scope Process -Force
 
 Write-Host "=== 环境检查 ===" -ForegroundColor Cyan
 

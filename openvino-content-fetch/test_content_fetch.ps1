@@ -1,4 +1,4 @@
-<#
+﻿<#
   Smoke test for the openvino-content-fetch skill.
 
   Offline & network-free where possible: exercises the fetcher's contract using stdlib-only

@@ -1,4 +1,4 @@
-Set-ExecutionPolicy Bypass -Scope Process -Force
+﻿Set-ExecutionPolicy Bypass -Scope Process -Force
 
 Write-Host "=== Python 安装测试 ===" -ForegroundColor Cyan
 

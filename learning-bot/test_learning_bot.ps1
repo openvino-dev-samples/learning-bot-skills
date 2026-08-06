@@ -1,4 +1,4 @@
-<#
+﻿<#
   Smoke test for the learning-bot launcher skill.
 
   Offline & network-free: exercises menu + routing (stdlib-only) and validates the skills
