@@ -325,6 +325,21 @@ data=<紧凑 JSON 数组；每个块 {type,id,prompt,multiselect,options:[{key,l
 不导出 IR、不跑 benchmark。仓库已在本地就用本地的解析；不在本地则返回 `reason=repo-required`
 并提示去掉 `--dry-run` 重跑 —— 绝不为了「让命令看起来成功」而偷偷下载。
 
+`--dry-run` **同样走 `[SKILL_RESULT]` 契约**，不要因为它是「只规划」就以为没有结果块：
+
+```
+[SKILL_RESULT]
+status=ok
+action=plan-only
+pipeline=<slug>
+stages=<阶段数>
+downloaded=false
+note=resolve+plan only; nothing was downloaded, built or benchmarked
+[/SKILL_RESULT]
+```
+
+`downloaded=false` 是这条命令的核心承诺；`action=plan-only` 用来和真正构建的那次结果区分开。
+
 ## 排错（简要）
 - **repo-required / goal-unresolved** → 让 `--serve`/构建先克隆仓库；细化 `--goal` 或传 `--slug`。
 - **no static model ids found** → 该 notebook 动态获取模型；显式提供该阶段的模型，或先跑一次 notebook。

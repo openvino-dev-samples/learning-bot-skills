@@ -1,4 +1,4 @@
-<#
+﻿<#
   test_contracts.ps1 —— 跨 skill 的契约回归测试（离线、不联网、不安装任何东西）。
 
   它守的是「文档写的 == 脚本做的」这条线。本仓库真实出现过的三类事故各对应一组断言：
@@ -197,6 +197,59 @@ if (Test-Path $pipe) {
   Assert "--dry-run took the dry-run path" ($out -match 'dry-run')    "no dry-run marker in output"
 } else {
   Assert "pipeline run.ps1 exists" $false
+}
+
+Write-Host ""
+Write-Host "=== Section 7: 编码可移植性（本机全绿也可能在别人机器上全崩） ===" -ForegroundColor Cyan
+# 背景：Windows PowerShell 5.1 对**无 BOM** 的 .ps1 按系统 ANSI 代码页读取。只有开了
+# 「Beta: 使用 UTF-8 提供全球语言支持」（代码页 65001）的机器才碰巧正常；cp1252 / cp936 机器上
+# 中文会被读花，字符串终止符和 hash 字面量随之错位，整份脚本解析失败。
+#
+# Section 1 只在**本机**解析文件，结构上发现不了这个问题 —— 它曾经 42/42 全绿，却放过了一个
+# 让 7 个 ENV 脚本在别人机器上无法解析的 bug。这一节把「换台机器会怎样」变成确定性断言。
+foreach ($f in $allPs1) {
+  $rel = $f.FullName.Substring($Root.Length + 1)
+  $bytes = [System.IO.File]::ReadAllBytes($f.FullName)
+  $hasBom = ($bytes.Length -ge 3 -and $bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF)
+  $hasNonAscii = @($bytes | Where-Object { $_ -gt 127 }).Count -gt 0
+
+  if ($hasNonAscii) {
+    Assert "$rel has a UTF-8 BOM (file contains non-ASCII)" $hasBom `
+      "PowerShell 5.1 reads BOM-less files as the system ANSI codepage; this file would be mangled on any non-UTF-8 machine"
+  }
+
+  # 直接断言最坏情况：没有 BOM 时 PS5.1 会看到什么，那样还能不能解析。
+  if ($hasBom) { $seen = [System.Text.Encoding]::UTF8.GetString($bytes, 3, $bytes.Length - 3) }
+  else         { $seen = [System.Text.Encoding]::GetEncoding(1252).GetString($bytes) }
+  $errs = $null
+  $null = [System.Management.Automation.Language.Parser]::ParseInput($seen, [ref]$null, [ref]$errs)
+  $detail = ""
+  if ($errs -and $errs.Count -gt 0) {
+    $detail = "as seen on a cp1252 machine -> line $($errs[0].Extent.StartLineNumber): $($errs[0].Message)"
+  }
+  Assert "$rel parses on a non-UTF-8 (cp1252) machine" (-not $errs -or $errs.Count -eq 0) $detail
+}
+
+# JSON 反过来：**不能**有 BOM。Python 侧用 encoding="utf-8" 读取，带 BOM 会让 json.load 抛异常
+# （那需要 utf-8-sig）。PowerShell 侧的中文问题靠 Get-Content -Encoding UTF8 解决，不靠 BOM。
+$jsonFiles = Get-ChildItem -Path $Root -Recurse -File -Include *.json,*.jsonl |
+             Where-Object { $_.FullName -notmatch '\\\.git\\' }
+foreach ($j in $jsonFiles) {
+  $rel = $j.FullName.Substring($Root.Length + 1)
+  $b = [System.IO.File]::ReadAllBytes($j.FullName)
+  $hasBom = ($b.Length -ge 3 -and $b[0] -eq 0xEF -and $b[1] -eq 0xBB -and $b[2] -eq 0xBF)
+  Assert "$rel has NO BOM (python json.load would fail on one)" (-not $hasBom) `
+    "strip the BOM, or switch the Python side to encoding='utf-8-sig'"
+}
+
+# PowerShell 侧凡是读 JSON 的地方都必须显式给编码，否则默认按系统 ANSI 读，中文照样读花。
+foreach ($f in $allPs1) {
+  $rel = $f.FullName.Substring($Root.Length + 1)
+  $src = Get-Content $f.FullName -Raw
+  foreach ($m in [regex]::Matches($src, 'Get-Content[^\r\n|]*\|\s*ConvertFrom-Json')) {
+    Assert "$rel reads JSON with an explicit -Encoding" ($m.Value -match '-Encoding') `
+      "Get-Content without -Encoding uses the system ANSI codepage on PowerShell 5.1: $($m.Value.Trim())"
+  }
 }
 
 Write-Host ""

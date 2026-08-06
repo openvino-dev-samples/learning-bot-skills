@@ -1,4 +1,4 @@
-<#
+﻿<#
   OpenVINO Pipeline Optimization — orchestrator.
 
   Resolves a pipeline (slug or goal), clones openvino_notebooks, sets up a persisted
@@ -234,12 +234,26 @@ if ($LASTEXITCODE -ne 0) {
   exit 1
 }
 
-$resolved = Get-Content $PlanJson -Raw | ConvertFrom-Json
+# 显式指定编码：PowerShell 5.1 的 Get-Content 默认按系统 ANSI 代码页读取，
+# notebook slug / 阶段名一旦含非 ASCII 就会在 cp1252 / cp936 机器上读花。
+$resolved = Get-Content $PlanJson -Raw -Encoding UTF8 | ConvertFrom-Json
 $Slug = $resolved.pipeline
 $IrDir = Join-Path $IrRoot $Slug
 
 if ($dryrun) {
   Log "--dry-run: resolved '$Slug'. No download/optimize/bench performed."
+  # dry-run 也必须发契约块：所有 SKILL.md 都写着「判断成败只看 [SKILL_RESULT] 的 status=」，
+  # 这里若什么都不发，调用方只能记 status=none，等于把这条约定在最常用的探路命令上作废。
+  $stageCount = 0
+  if ($resolved.stages) { $stageCount = @($resolved.stages).Count }
+  Emit-Result([ordered]@{
+    status     = "ok"
+    action     = "plan-only"
+    pipeline   = $Slug
+    stages     = $stageCount
+    downloaded = "false"
+    note       = "resolve+plan only; nothing was downloaded, built or benchmarked"
+  })
   exit 0
 }
 
