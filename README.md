@@ -108,6 +108,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "<入口脚本绝对路径>"
 
 - **退出码**：`0` = 成功，`1` = 失败。
 - **判断成败只看 `[SKILL_RESULT]` 里的 `status=`**，不要因为「有输出」就断定成功。
+- **`[SKILL_QUESTIONS]` 是问题清单，不是结果汇报，它没有也不需要 `status=`** —— 只有
+  `[SKILL_RESULT]` 才看 `status=`。两个块用途不同，不要互相套用。
 - **未知参数不会被静默忽略**：任何拼错的参数都会返回 `status=error` + `reason=unknown-argument`
   并退出 1。看到它就是拼写错了，去对照上表的参数风格，而不是原样重试。
 - **不要用参数缩写**：例如 pipeline 的 `-s` 会同时匹配 `slug/serve/status/stop` 而报

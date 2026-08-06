@@ -16,6 +16,23 @@
 
 ---
 
+## 第 0 步：先确认被测的是最新代码
+
+**跑任何测试之前，先核对被测 checkout 的 commit。** 曾经有一轮 TRAE 报告把 3 条路由判成缺陷
+（PRD → `preset/asr`、学习路径 → `clarify`、语音助手 → `clarify`），排查后发现那台机器停在
+`synthesize` / `compose` 落地之前的旧提交 —— 代码早就修好了，白白排查一轮。
+
+```powershell
+cd <被测仓库>
+git fetch origin
+git status -sb              # 落后就先 git pull
+git log --oneline -1        # 与 origin/main 对一下
+```
+
+**报缺陷前务必确认它在最新代码上仍然复现。**
+
+---
+
 ## L1：先跑这个（1 分钟，离线）
 
 ```powershell
