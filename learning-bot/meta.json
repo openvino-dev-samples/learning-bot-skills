@@ -8,7 +8,8 @@
     "启动 Learning Bot 并向用户推荐可用的本地能力（预设问题）",
     "把用户请求路由到对应的本地 aipc-skill（语音/图像/文档/自动化等）",
     "当需求超出预设本地能力时，路由到 ENV/FETCH/PIPE 开发类 skill",
-    "下载并在本地安装某个预设 aipc-skill"
+    "下载并在本地安装某个预设 aipc-skill",
+    "探测本机内存/显存预算，判定某个模型跑不跑得动，用于过滤模型推荐"
   ],
   "author": "Intel AIPC Skills",
   "version": "1.0.0"

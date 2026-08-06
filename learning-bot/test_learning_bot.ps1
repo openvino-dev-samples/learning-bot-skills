@@ -207,5 +207,51 @@ Check "preset question offers all 14 skills (5th option = ... or block options)"
 }
 
 Write-Host ""
+Write-Host "=== Section 6: 资源检测与模型可行性 ===" -ForegroundColor Cyan
+# 这一节不触发真实硬件探测（--capacity 要起 OpenVINO，首次要一两分钟），
+# 而是喂一份构造出来的 capacity 缓存，把估算逻辑本身钉住。
+
+$CapReal   = Join-Path $env:USERPROFILE ".openvino\capacity.json"
+$CapBackup = Join-Path $env:USERPROFILE ".openvino\capacity.testbak.json"
+New-Item -ItemType Directory -Force -Path (Split-Path $CapReal) | Out-Null
+$hadReal = Test-Path $CapReal
+if ($hadReal) { Copy-Item $CapReal $CapBackup -Force }
+
+try {
+  # 模拟一台 8GB 显存的机器 —— 也就是用户最初提的那个场景。
+  $fake = '{"source":"openvino","total_ram_gb":16,"free_ram_gb":9,"devices":["CPU","GPU"],' +
+          '"gpu_type":"discrete","gpu_budget_gb":8,"shared_with_ram":false,' +
+          '"safety_margin":0.85,"usable_budget_gb":6.8}'
+  [System.IO.File]::WriteAllText($CapReal, $fake, (New-Object System.Text.UTF8Encoding($false)))
+
+  # 8GB 显存跑不了 15B —— 这是本功能存在的理由，必须钉死。
+  $r15 = & $Py $Bot --can-run "some-15B-model" --params 15 --precision INT4 2>&1 | Out-String
+  Check "8GB budget: 15B INT4 -> fits=false"       { $r15 -match "fits=false" }
+  Check "8GB budget: 15B INT4 gives alternatives"  { $r15 -match "alternatives=\S" }
+
+  # 小模型必须判为能跑，否则就是过度保守、把能用的模型全挡了。
+  $rs = & $Py $Bot --can-run "tiny-1.5B-INT4-OV" 2>&1 | Out-String
+  Check "8GB budget: 1.5B INT4 -> fits=true"       { $rs -match "fits=true" }
+
+  # model id 解析：7B 要认出来，2.5 那个版本号不能被当成参数量。
+  $rp = & $Py $Bot --can-run "Qwen2.5-7B-Instruct-INT4-OV" 2>&1 | Out-String
+  Check "model id parse: params_b=7 (not the 2.5 version)" { $rp -match "params_b=7(\.0)?" }
+  Check "model id parse: precision=INT4"           { $rp -match "precision=INT4" }
+
+  # 解析不出参数量时必须说 unknown，而不是编一个数字。
+  $ru = & $Py $Bot --can-run "whisper-base" 2>&1 | Out-String
+  Check "unparseable model id -> fits=unknown"     { $ru -match "fits=unknown" }
+} finally {
+  if ($hadReal) { Copy-Item $CapBackup $CapReal -Force; Remove-Item $CapBackup -Force -EA SilentlyContinue }
+  else          { Remove-Item $CapReal -Force -EA SilentlyContinue }
+}
+
+# 离线纯净性：--route / --menu 不得依赖 capacity 缓存，缓存不在也要照常工作。
+$noCap = & $Py $Bot --route "帮我把这段录音转成文字。" 2>&1 | Out-String
+Check "route still works without a capacity cache" {
+  ($noCap -match "scope=preset") -and ($noCap -match "target=asr")
+}
+
+Write-Host ""
 Write-Host "=== Result: $pass passed, $fail failed ===" -ForegroundColor Cyan
 if ($fail -gt 0) { exit 1 } else { exit 0 }

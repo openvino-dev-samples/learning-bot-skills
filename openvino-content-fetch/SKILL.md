@@ -141,8 +141,21 @@ action=download
 model_id=<解析出的 model id>
 local_dir=<绝对本地路径>
 has_ir=true|false
+fits=true|false               # 以下 4 项仅在能判定时出现
+need_gb=<估算需要的显存/内存>
+budget_gb=<本机可用预算>
+capacity_source=openvino|estimate
+alternatives=<超预算时的替代方案>
 [/SKILL_RESULT]
 ```
+
+**资源预算字段**来自 learning-bot 的探测结果（`~/.openvino/capacity.json`，由
+`learning-bot -Capacity` 生成）加上 `learning-bot/scripts/model_sizing.json` 的系数表。
+只有**同时**拿得到本机预算、且能从 model id 解析出参数量时才输出这几项；拿不到就整组省略
+—— 不会用空值伪装成「已判定」。
+
+`fits=false` **不阻断下载**（估算刻意偏保守，用户也可能就是要拿去 CPU 上跑），但会在日志里
+给出警告和替代方案。默认按 **INT4** 估算，除非 model id 里写明了别的精度。
 
 ## API 参考（ModelScope）
 

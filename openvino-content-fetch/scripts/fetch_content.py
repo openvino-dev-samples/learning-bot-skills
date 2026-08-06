@@ -1087,11 +1087,85 @@ def _resolve_model_id(model_id):
     return f"OpenVINO/{model_id}"
 
 
+def _load_json_quiet(path):
+    """读一个可选的 JSON 文件；不存在或坏了就返回 None。资源判定是锦上添花，不能拖垮下载。"""
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return None
+
+
+def budget_check(model_id):
+    """按 learning-bot 探测出来的本机预算，估一下这个模型装不装得下。
+
+    数据来源都在 learning-bot 那边（~/.openvino/capacity.json 由 detect_resources.ps1 写，
+    系数表是 learning-bot/scripts/model_sizing.json），这里只做消费，不重复实现一套估算逻辑。
+
+    返回 dict（可能为空）：fits / need_gb / budget_gb / capacity_source / alternatives。
+    拿不到资源信息时返回 {} —— 宁可不给结论，也不要编一个。
+    """
+    home = os.environ.get("USERPROFILE", os.path.expanduser("~"))
+    cap = _load_json_quiet(os.path.join(home, ".openvino", "capacity.json"))
+    repo_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    sizing = _load_json_quiet(
+        os.path.join(repo_root, "learning-bot", "scripts", "model_sizing.json"))
+    if not cap or not sizing:
+        return {}
+
+    m = re.search(r"(\d+(?:\.\d+)?)\s*[Bb](?![a-zA-Z])", model_id or "")
+    if not m:
+        return {}
+    params_b = float(m.group(1))
+
+    precision = sizing.get("default_precision", "INT4")
+    upper = (model_id or "").upper()
+    for p in ("INT4", "INT8", "FP16", "FP32"):
+        if p in upper:
+            precision = p
+            break
+
+    per = sizing.get("bytes_per_param", {}).get(precision)
+    budget = cap.get("usable_budget_gb")
+    if per is None or budget is None:
+        return {}
+    overhead = sizing.get("runtime_overhead_gb", 0)
+    need = round(params_b * per + overhead, 1)
+
+    out = {
+        "need_gb": need,
+        "budget_gb": budget,
+        "capacity_source": cap.get("source", ""),
+        "fits": "true" if need <= budget else "false",
+    }
+    if need > budget:
+        alts = []
+        order = ["FP32", "FP16", "INT8", "INT4"]
+        if precision in order:
+            for lower in order[order.index(precision) + 1:]:
+                lp = sizing["bytes_per_param"].get(lower)
+                if lp is None:
+                    continue
+                n2 = round(params_b * lp + overhead, 1)
+                if n2 <= budget:
+                    alts.append(f"{lower}:{n2}GB")
+                    break
+        for tier in sorted((t for t in sizing.get("known_param_tiers", []) if t < params_b),
+                           reverse=True):
+            n2 = round(tier * per + overhead, 1)
+            if n2 <= budget:
+                alts.append(f"{tier}B@{precision}:{n2}GB")
+                break
+        out["alternatives"] = ",".join(alts)
+    return out
+
+
 def download_model(model_id, out_dir=None, china=False):
     """Download a model / pre-converted OpenVINO IR from ModelScope via snapshot_download.
 
     Prefers the OpenVINO organization (pre-converted IR) when a bare id is given. Reports the local
-    path and whether OpenVINO IR (openvino_model.xml) is present.
+    path, whether OpenVINO IR (openvino_model.xml) is present, and whether the model fits in the
+    machine's detected memory budget.
     """
     try:
         from modelscope import snapshot_download
@@ -1100,6 +1174,13 @@ def download_model(model_id, out_dir=None, china=False):
         return {"status": "error", "note": "modelscope SDK missing"}
 
     repo_id = _resolve_model_id(model_id)
+
+    # 下载前先把预算结论说出来。按既定决策，超预算**不阻断**下载（估算偏保守，用户也可能
+    # 就是想拿去 CPU 上跑），但必须让调用方当场看到，而不是等下完几个 GB 才发现 OOM。
+    budget = budget_check(repo_id)
+    if budget.get("fits") == "false":
+        log(f"WARNING: '{repo_id}' needs ~{budget['need_gb']}GB but this machine's usable budget "
+            f"is ~{budget['budget_gb']}GB. Alternatives: {budget.get('alternatives') or 'none found'}")
     if not out_dir:
         base = os.path.join(os.environ.get("USERPROFILE", os.path.expanduser("~")), ".openvino", "models")
         out_dir = os.path.join(base, repo_id.replace("/", "_"))
@@ -1119,7 +1200,9 @@ def download_model(model_id, out_dir=None, china=False):
             break
 
     log(f"Downloaded '{repo_id}' to {local_dir} (has_ir={has_ir}).")
-    return {"status": "ok", "model_id": repo_id, "local_dir": local_dir, "has_ir": has_ir}
+    result = {"status": "ok", "model_id": repo_id, "local_dir": local_dir, "has_ir": has_ir}
+    result.update(budget)
+    return result
 
 
 # ----------------- Main Entry Point -----------------
@@ -1151,6 +1234,11 @@ def main():
         print(f"model_id={dl.get('model_id', args.download)}")
         print(f"local_dir={dl.get('local_dir', '')}")
         print(f"has_ir={str(dl.get('has_ir', False)).lower()}")
+        # 资源预算字段：只有拿得到本机 capacity 且能从 model id 解析出参数量时才有。
+        # 拿不到就整组不输出 —— 不要用空值伪装成"已判定"。
+        for key in ("fits", "need_gb", "budget_gb", "capacity_source", "alternatives"):
+            if dl.get(key) not in (None, ""):
+                print(f"{key}={dl[key]}")
         if dl.get("note"):
             print(f"note={dl['note']}")
         print("[/SKILL_RESULT]")

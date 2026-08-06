@@ -38,8 +38,38 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "<REPO>\learning-bot\scripts
 | 工作目录 | 任意 —— 只要 `-File` 后面是正确的绝对路径 |
 | 退出码 | `0` = 成功；`1` = 失败（含未知参数、python 缺失） |
 | 判断成败 | **只看 `[SKILL_RESULT]` 里的 `status=`**，不要凭「有输出」就断定成功 |
-| 参数写法 | 单连字符 + 完整参数名（`-Menu` / `-Route` / `-Install`），不要用缩写 |
+| 参数写法 | 单连字符 + 完整参数名（`-Menu` / `-Route` / `-Install` / `-Capacity` / `-CanRun`），不要用缩写 |
 | 未知参数 | 返回 `status=error`、`reason=unknown-argument` 并退出 1，**不会**静默忽略 |
+
+## 本机资源与模型可行性
+
+推荐模型前先确认本机装得下 —— 8GB 显存跑不了 15B 模型，与其让用户下完几个 GB 才发现 OOM，
+不如先算一笔账。
+
+```powershell
+# 探测本机预算（会调 OpenVINO，首次较慢，结果缓存到 ~/.openvino/capacity.json）
+powershell -NoProfile -ExecutionPolicy Bypass -File "<REPO>\learning-bot\scripts\run.ps1" -Capacity
+
+# 判定某个模型跑不跑得动（参数量/精度可从 model id 自动解析）
+powershell -NoProfile -ExecutionPolicy Bypass -File "<REPO>\learning-bot\scripts\run.ps1" -CanRun "Qwen2.5-7B-Instruct-INT4-OV"
+powershell -NoProfile -ExecutionPolicy Bypass -File "<REPO>\learning-bot\scripts\run.ps1" -CanRun "某模型" -Params 15 -Precision INT4
+```
+
+`-Capacity` 输出 `action=capacity`；`-CanRun` 输出 `action=can-run`，含 `fits=true|false|unknown`、
+`need_gb`、`budget_gb`，超预算时还有 `alternatives`。
+
+**三件最容易搞错的事：**
+
+1. **iGPU 的显存和系统内存是同一块。** `gpu_type=integrated` / `shared_with_ram=true` 时，
+   `gpu_budget_gb` 和 `free_ram_gb` **不能相加**；`usable_budget_gb` 已经取过两者的较小值，
+   直接用它就行。
+2. **默认按 INT4 估算**（AIPC 部署的常态）。model id 里写了 `-FP16-` 之类才会按那个精度算。
+   系数在 [scripts/model_sizing.json](scripts/model_sizing.json)，可按实测调整。
+3. **`source=estimate` 时结论只是参考** —— 那表示机器上没装 OpenVINO，预算是从系统内存粗估的。
+   `fits=unknown` 表示没探测过或解析不出参数量，**不要**把它当成「能跑」。
+
+`fits=false` **不代表禁止使用** —— 估算刻意偏保守。要如实把 `need_gb` / `budget_gb` /
+`alternatives` 告诉用户，由用户决定，不要擅自替他放弃。
 
 ---
 

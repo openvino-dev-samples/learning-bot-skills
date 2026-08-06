@@ -99,7 +99,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "<入口脚本绝对路径>"
 
 | Skill | 入口脚本 | 参数风格 |
 |---|---|---|
-| `learning-bot` | `learning-bot/scripts/run.ps1` | 单连字符 `-Menu` / `-Route` / `-Install` |
+| `learning-bot` | `learning-bot/scripts/run.ps1` | 单连字符 `-Menu` / `-Route` / `-Install` / `-Capacity` / `-CanRun` |
 | `openvino-content-fetch` | `openvino-content-fetch/scripts/run.ps1` | 单连字符 `-Source` / `-Download` / `-Questions` |
 | `openvino-pipeline-optimization` | `openvino-pipeline-optimization/scripts/run.ps1` | 双连字符 `--slug` / `--dry-run` / `--questions` |
 | `openvino-environment-management` | `precheck_env.ps1` 和 `intel_aipc_env_setup.ps1`（**在技能根目录，没有 `scripts/`**） | 单连字符 `-China` / `-InstallCmake` / `-Yes` |
@@ -117,6 +117,10 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "<入口脚本绝对路径>"
 - **零成本探路命令**（不联网、不建 venv、不下载）：各 skill 的 `-Questions` / `--questions`、
   `-Status` / `--status`、pipeline 的 `--dry-run`、env 的 `precheck_env.ps1`。不确定时先跑这些。
 - **非交互式环境**（agent / CI）调用 env skill 时加 `-Yes`，脚本不会停下来等 stdin。
+- **推荐模型前先看装不装得下**：`learning-bot -Capacity` 探测本机预算（写缓存
+  `~/.openvino/capacity.json`），`-CanRun <model>` 判定可行性；content-fetch 下载模型时会自动
+  带上 `fits` / `need_gb` / `budget_gb`。**iGPU 的显存与系统内存同源，不能相加** ——
+  直接用 `usable_budget_gb`。
 
 ## Requirements
 

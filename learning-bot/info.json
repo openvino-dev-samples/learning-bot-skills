@@ -4,6 +4,9 @@
   "mem_need_gb": 1.0,
   "entry_script": "scripts/run.ps1",
   "registry": "scripts/skills_registry.json",
+  "resource_detect_script": "scripts/detect_resources.ps1",
+  "model_sizing": "scripts/model_sizing.json",
+  "capacity_cache": "~/.openvino/capacity.json",
   "preset_release": {
     "repo": "makejiang/aipc-skills",
     "version": "1.0.6",
