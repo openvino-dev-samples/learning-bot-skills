@@ -9,15 +9,15 @@ runs locally and is offline / China-network capable (`-China`).
 
 | Skill | What it does |
 |---|---|
-| [`learning-bot`](learning-bot/) | **Entry / launcher.** Starts the Learning Bot: recommends a set of preset questions (each mapped to a local aipc-skill — ASR / TTS / realtime-translator / OCR (NPU·GPU) / MinerU / txt2img / img2img / txt2video / SR / YOLO26 / screenshot-QA / computer-use / VRAM). Downloads & invokes the matching skill on a preset hit; routes out-of-scope requests to the three dev skills below. |
+| [`learning-bot`](learning-bot/) | **Entry / launcher.** Starts the Learning Bot: recommends a set of 15 preset questions, each mapped to a **published** local aipc-skill (Local ASR / Local TTS / Local T2I / Local computer use / Local OCR on NPU / local-mineru / local-screenshot-qa / local-vram / local-img2img / local-realtime-translator / LightX2V / Local PaddleOCR-VL-1.5 / Yolo26 / Desktop Pet / AI游戏路书Skill). Resolves a preset hit to its published skill name for the host to invoke; routes out-of-scope requests to the three dev skills below. |
 | [`openvino-environment-management`](openvino-environment-management/) | Configure the Intel AIPC dev environment on Windows (Python, Git, ModelScope, OpenVINO, PyTorch; optional CMake / Visual Studio). |
 | [`openvino-content-fetch`](openvino-content-fetch/) | Fetch, parse, and index notebooks / samples / models / articles from GitHub, ModelScope AI PC Zone, and CSDN; returns a structured `[SKILL_RESULT]`. Also locates and downloads models / pre-converted OpenVINO IR from ModelScope and the Intel OpenVINO Model Hub. |
 | [`openvino-pipeline-optimization`](openvino-pipeline-optimization/) | Scaffold a multi-model OpenVINO pipeline from notebook(s): discover stages → optimize (device + precision) → benchmark → serve (client + server) → optionally **package the pipeline as a distributable local AI skill** (fixed `run.ps1` entry + client-server named-pipe + model download/resume + SKILL.md routing; integrated from [`local-ai-skill-authoring`](https://github.com/openvino-dev-samples/local-ai-skill-authoring)). |
 
 The `learning-bot` skill is the **entry point**: it presents preset questions and routes each request
-to a preset local skill or, when out of scope, to one of the three dev skills. The preset skills are
-downloaded from the [`makejiang/aipc-skills`](https://github.com/makejiang/aipc-skills/releases/tag/1.0.6)
-`1.0.6` release.
+to a preset local skill or, when out of scope, to one of the three dev skills. The 15 preset skills
+are **already published** — `learning-bot -Resolve <key>` maps an internal key to the published skill
+name and the host invokes it by that name; this repo no longer hosts any download URL.
 
 ## Prepared Questions
 
@@ -71,7 +71,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File openvino-content-fetch\test_
 powershell -NoProfile -ExecutionPolicy Bypass -File openvino-pipeline-optimization\test_pipeline.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File openvino-environment-management\test_questions.ps1
 
-# L2/L3 agent 层：在 TRAE / Cursor / Cline 里跑 29 条用例后判分
+# L2/L3 agent 层：在 TRAE / Cursor / Cline 里跑 agent-eval/cases.jsonl 的用例后判分
 powershell -NoProfile -ExecutionPolicy Bypass -File agent-eval\grade.ps1 -Transcript .\transcript.txt
 ```
 
@@ -99,7 +99,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "<入口脚本绝对路径>"
 
 | Skill | 入口脚本 | 参数风格 |
 |---|---|---|
-| `learning-bot` | `learning-bot/scripts/run.ps1` | 单连字符 `-Menu` / `-Route` / `-Install` / `-Capacity` / `-CanRun` |
+| `learning-bot` | `learning-bot/scripts/run.ps1` | 单连字符 `-Menu` / `-Route` / `-Resolve` / `-Capacity` / `-CanRun` |
 | `openvino-content-fetch` | `openvino-content-fetch/scripts/run.ps1` | 单连字符 `-Source` / `-Download` / `-Questions` |
 | `openvino-pipeline-optimization` | `openvino-pipeline-optimization/scripts/run.ps1` | 双连字符 `--slug` / `--dry-run` / `--questions` |
 | `openvino-environment-management` | `precheck_env.ps1` 和 `intel_aipc_env_setup.ps1`（**在技能根目录，没有 `scripts/`**） | 单连字符 `-China` / `-InstallCmake` / `-Yes` |

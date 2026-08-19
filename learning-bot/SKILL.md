@@ -3,19 +3,19 @@ name: learning-bot
 description: |
   Learning Bot 的入口 / 启动 skill。调用本技能即可"开启 Learning Bot"：它会把一组**预设问题**推荐
   给用户，每条预设问题对应一个在 Intel AIPC 上本地运行的 aipc-skill（ASR、TTS、实时翻译、OCR(NPU/GPU)、
-  MinerU 文档解析、文生图、图生图、文生视频、超分、YOLO26 目标检测、截图问答、电脑自动化、显存查看）。
-  这 14 个 skill 是**原子能力**：本技能会先分析用户需求能否以它们为基础搭出来 —— 单个能力能做就
+  MinerU 文档解析、PaddleOCR-VL 结构化解析、文生图、图生图、LightX2V 视频生成、YOLO26 目标检测、截图问答、电脑自动化、显存上限调整、桌宠、游戏路书）。
+  这 15 个 skill 是**原子能力**：本技能会先分析用户需求能否以它们为基础搭出来 —— 单个能力能做就
   直接调用；需要多个能力才能做的，就把它们按数据流顺序**组合成一条链**（如 mineru→tts 做有声书、
   asr→realtime-translator 做实时字幕、ocr→tts 朗读图片文字）。三个开发类 skill
   （openvino-environment-management 配环境、openvino-content-fetch 找 notebook / 下载模型、
   openvino-pipeline-optimization 组装 / 优化 / 部署流水线）是**辅助**：只在链条缺环境、缺模型、
-  需要服务化，或某一段能力这 14 个原子覆盖不到时才参与，由那一段单独开发后接回链条。
+  需要服务化，或某一段能力这 15 个原子覆盖不到时才参与，由那一段单独开发后接回链条。
   只有当需求的**产出物本身就是开发资产**（环境 / notebook / 模型文件 / 量化 IR / 性能报告）时，
   才直接交给开发类 skill 从零开发。
   当用户想启动 / 打开 learning bot、想知道"你能做什么 / 有哪些功能"、或提出上述任一本地推理需求时调用
   本技能。触发词：start learning bot、open learning bot、启动 / 开启 learning bot、你能做什么、
   有哪些功能、推荐一些能力、语音转文字、文字转语音、实时翻译、OCR、识别文字、解析 PDF、文生图、
-  图生图、文生视频、超分、目标检测、截图问答、电脑自动化、查看显存。
+  图生图、视频生成、目标检测、截图问答、电脑自动化、显存上限调整、桌宠、游戏路书。
   需要 Intel AIPC (Windows)。
 ---
 
@@ -38,7 +38,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "<REPO>\learning-bot\scripts
 | 工作目录 | 任意 —— 只要 `-File` 后面是正确的绝对路径 |
 | 退出码 | `0` = 成功；`1` = 失败（含未知参数、python 缺失） |
 | 判断成败 | **只看 `[SKILL_RESULT]` 里的 `status=`**，不要凭「有输出」就断定成功 |
-| 参数写法 | 单连字符 + 完整参数名（`-Menu` / `-Route` / `-Install` / `-Capacity` / `-CanRun`），不要用缩写 |
+| 参数写法 | 单连字符 + 完整参数名（`-Menu` / `-Route` / `-Resolve` / `-Capacity` / `-CanRun`），不要用缩写 |
 | 未知参数 | 返回 `status=error`、`reason=unknown-argument` 并退出 1，**不会**静默忽略 |
 
 ## 本机资源与模型可行性
@@ -76,18 +76,18 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "<REPO>\learning-bot\scripts
 本技能是 Learning Bot 的**入口**。调用它 = "开启 Learning Bot"：向用户推荐一组预设问题，并根据用户
 的问题把请求路由到正确的下游 skill。它自己不做推理，而是负责**推荐 + 路由 + 安装**：
 
-1. **推荐（Menu）** —— 被调用时，把下面 14 条预设问题推荐给用户。每条预设问题都对应一个在本机
+1. **推荐（Menu）** —— 被调用时，把下面 15 条预设问题推荐给用户。每条预设问题都对应一个在本机
    （Intel AIPC）离线运行的 aipc-skill。
 2. **路由（Route）** —— 见下面的「路由判断顺序」。
-3. **安装（Install）** —— 从 aipc-skills 的 1.0.6 release 下载并解压所选 skill 的 zip 到本地。
+3. **解析（Resolve）** —— 把内部 key 解析成上架后的官方 skill 名；这些 skill 已上架，宿主按名字直接调用，不需要下载。
 
 > 路由脚本给出的是**建议**，不是硬性判决。最终由 agent 结合上下文决定调用哪个 skill。
 
 ---
 
-## 核心原则：14 个本地能力是**原子能力**，优先拿它们拼装
+## 核心原则：15 个本地能力是**原子能力**，优先拿它们拼装
 
-这 14 个 skill 不是一张「命中就调、没命中就算了」的查找表，而是一组**可以串起来用的积木**。
+这 15 个 skill 不是一张「命中就调、没命中就算了」的查找表，而是一组**可以串起来用的积木**。
 面对一个需求，**先分析它能不能用这些原子能力（单个或组合）搭出来**，能搭就搭；三个开发类 skill
 （ENV / FETCH / PIPE）是**辅助**，负责补环境、找模型、做服务化，而不是一没命中预设就整个接管、
 从零开发。
@@ -103,7 +103,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "<REPO>\learning-bot\scripts
 
 > 物料上四个应用场景的对应关系：**APP Build → `compose`**；
 > **PRD Build / Customize Training / Learning Path Planning → `synthesize`**。
-> 后三者**不是** 14 个原子能力之外的第 15/16/17 个 skill —— 它们没有可安装的 skill、
+> 后三者**不是** 15 个原子能力之外的额外 skill —— 它们没有可安装的 skill、
 > 也没有 `[SKILL_RESULT]` 可产出，真正干活的是你的写作能力。
 
 ### 路由判断顺序（严格按此顺序）
@@ -137,7 +137,7 @@ ASR skill 做推理。
 
 ### 链条上有缺口怎么办 —— `gaps=`
 
-如果需求里有一段是 14 个原子能力覆盖不到的（语音克隆、声纹识别、人脸识别、图像分割、深度估计、
+如果需求里有一段是 15 个原子能力覆盖不到的（语音克隆、声纹识别、人脸识别、图像分割、深度估计、
 姿态估计、人声分离、视频问答），**不要因此放弃整条链**：
 
 - 能被原子能力覆盖的阶段 → **照常用预设原子能力**
@@ -165,7 +165,7 @@ ASR skill 做推理。
 
 拿到 `targets=a,b,c` 后，agent 按顺序逐个执行，**不要期待脚本自动串联**：
 
-1. 对每个 key 依次 `-Install <key>`，再调用该 skill。
+1. 对每个 key 依次 `-Resolve <key>` 取到 skill 名，再按该名字调用。
 2. 把上一步的产物作为下一步的输入（各阶段的输入 / 输出类型见 registry 的 `io` 字段）。
 3. **每一步都要解析 `[SKILL_RESULT]` 的 `status=`**，失败就停下并如实报告，不要硬着头皮往下走。
 4. `gaps=` 里的阶段没有现成 skill，按 FETCH → PIPE 的路子单独做，做完再接回链条。
@@ -180,7 +180,6 @@ ASR skill 做推理。
 | 会议纪要 | `asr` → 由 agent 直接总结 |
 | 文档转有声书 | `mineru → tts` |
 | 图片文字朗读 | `ocr-npu → tts` |
-| 生成图并增强 | `txt2img → sr` |
 | 看屏幕并自动操作 | `screenshot-qa → computer-use` |
 | 带配音的视频 | `txt2video → tts` |
 
@@ -188,39 +187,58 @@ ASR skill 做推理。
 
 ---
 
-## 预设问题（推荐给用户 · 14 个本地能力）
+## 预设问题（推荐给用户 · 15 个本地能力）
 
-调用本技能时，把这些问题原样推荐给用户（"你可以直接问我下面这些……"）。用户问到其中任意一条，就
-下载 + 调用对应 skill。
+调用本技能时，把这些问题原样推荐给用户（"你可以直接问我下面这些……"）。用户问到其中任意一条，
+就调用对应 skill。
 
-| # | 预设问题（推荐话术） | 本地 skill | key |
+**这 15 个 skill 已经上架**，按 `skill 名` 直接调用即可 —— 本技能不再托管下载地址、也不负责
+下载解压。`key` 只是仓库内部的稳定标识（路由、关键词、组合配方都用它），对外调用请用 `skill 名`。
+
+| # | 预设问题（推荐话术） | skill 名（调用用） | key（内部） |
 |---|---|---|---|
-| 1 | "帮我把这段录音/语音转成文字。" | 本地语音识别 (ASR) | `asr` |
-| 2 | "把这段文字读出来，生成一段语音。" | 本地语音合成 (TTS) | `tts` |
-| 3 | "帮我实时翻译这段对话/语音。" | 本地实时翻译 | `realtime-translator` |
-| 4 | "用 NPU 识别这张图片里的文字。" | 本地 OCR (NPU) | `ocr-npu` |
-| 5 | "用 GPU 识别这张图/文档里的文字。" | 本地 OCR (GPU) | `ocr-gpu` |
-| 6 | "帮我解析这个 PDF，转成 Markdown / 结构化文本。" | 本地文档解析 (MinerU) | `mineru` |
-| 7 | "根据这段描述生成一张图片。" | 本地文生图 (Text-to-Image) | `txt2img` |
-| 8 | "把这张图改成某种风格 / 基于这张图生成新图。" | 本地图生图 (Image-to-Image) | `img2img` |
-| 9 | "根据这段描述生成一段视频。" | 本地文生视频 (Text-to-Video) | `txt2video` |
-| 10 | "把这张模糊/低清的图片变清晰、放大。" | 本地超分辨率 (Super-Resolution) | `sr` |
-| 11 | "帮我检测这张图片里有哪些物体。" | 本地目标检测 (YOLO26) | `yolo26` |
-| 12 | "帮我截个屏，然后回答关于屏幕内容的问题。" | 本地截图问答 | `screenshot-qa` |
-| 13 | "帮我自动操作电脑完成某个任务。" | 本地电脑自动化 (Computer Use) | `computer-use` |
-| 14 | "看看我现在的显存 / VRAM 占用情况。" | 本地显存查看 (VRAM) | `vram` |
+| 1 | "帮我把这段录音/语音转成文字。" | `Local ASR` | `asr` |
+| 2 | "把这段文字读出来，生成一段语音。" | `Local TTS` | `tts` |
+| 3 | "根据这段描述生成一张图片。" | `Local T2I` | `txt2img` |
+| 4 | "帮我自动操作电脑完成某个任务。" | `Local computer use` | `computer-use` |
+| 5 | "识别这张图片里的文字。" | `Local OCR on NPU` | `ocr-npu` |
+| 6 | "帮我解析这个 PDF，转成 Markdown / 结构化文本。" | `local-mineru` | `mineru` |
+| 7 | "帮我截个屏，然后回答关于屏幕内容的问题。" | `local-screenshot-qa` | `screenshot-qa` |
+| 8 | "帮我调整集成显卡的共享显存上限。" | `local-vram` | `vram` |
+| 9 | "基于这张图重绘 / 修改一张新图。" | `local-img2img` | `img2img` |
+| 10 | "帮我实时翻译这段对话/语音。" | `local-realtime-translator` | `realtime-translator` |
+| 11 | "根据这段描述生成一段视频。" | `LightX2V` | `txt2video` |
+| 12 | "帮我把这份发票/表单/报表解析成结构化数据。" | `Local PaddleOCR-VL-1.5` | `paddleocr-vl` |
+| 13 | "检测这张图片里有哪些物体。" | `Yolo26` | `yolo26` |
+| 14 | "帮我部署一个本地桌宠。" | `Desktop Pet` | `desktop-pet` |
+| 15 | "帮我做一个游戏实时攻略助手。" | `AI游戏路书Skill` | `game-guide` |
 
-> OCR 同时提供 NPU 与 GPU 两个变体：用户明确说 "GPU" 就用 `ocr-gpu`，否则默认 `ocr-npu`。
+几个容易搞混的点：
 
-这 14 个 skill 的下载地址（zip 文件名 + release）由 [`scripts/skills_registry.json`](scripts/skills_registry.json)
-统一维护，release 基址为
-`https://github.com/makejiang/aipc-skills/releases/download/1.0.6/`。
+- **OCR 只有 NPU 版**（`Local OCR on NPU`），清单里没有单独的 GPU 版本。用户即使点名 "GPU"
+  也只能给 `ocr-npu` —— 不要凭空造一个不存在的 skill。
+- **文档解析有两个，分工不同**：`local-mineru` 做通用 PDF/图片转 Markdown；
+  `Local PaddleOCR-VL-1.5` 做发票 / 表单 / 报表这类**保留版面的结构化提取**（输出 JSON、
+  可接 document-to-data / document-to-code）。两者同属一个流水线阶段，**不要串成一条链**。
+- **`LightX2V` 不止文生视频**：也覆盖图生视频与图像编辑。
+- **`local-vram` 是"调整"共享显存上限**，不是只读查看。想知道本机还剩多少可用预算，
+  用本技能的 `-Capacity`（见下文「本机资源与模型可行性」）。
+
+用 `-Resolve <key>` 可以把内部 key 解析成上面的 skill 名：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File "<REPO>\learning-bot\scripts
+un.ps1" -Resolve mineru
+# -> skill_name=local-mineru
+```
+
+清单统一维护在 [`scripts/skills_registry.json`](scripts/skills_registry.json)。
 
 ---
 
 ## 超出预设范围 → 路由到开发类 skill
 
-当用户的需求不是上面 14 个"开箱即用的本地能力"，而是**开发 / 构建**类需求时，改为路由到本仓库的三个
+当用户的需求不是上面 15 个"开箱即用的本地能力"，而是**开发 / 构建**类需求时，改为路由到本仓库的三个
 开发类 skill（见 [../README.md](../README.md)）：
 
 | skill | 何时用 |
@@ -248,8 +266,9 @@ ASR skill 做推理。
 | -Menu | 打印推荐给用户的预设问题（默认动作 = 启动 Learning Bot） |
 | -Questions \<type\> | 输出准备好的问题：`preset` / `preflight` / `clarify` / `all`（`[SKILL_QUESTIONS]` 契约，离线） |
 | -Route "\<text\>" | 对一句用户输入给出路由建议（preset / dev / clarify） |
-| -Install \<key\> | 下载并解压对应的 aipc-skill（key 见上表） |
-| -OutDir | -Install 的目标目录（默认 `~/.aipc-skills`） |
+| -Resolve \<key\> | 把内部 key 解析成上架后的 skill 名（宿主按该名字调用） |
+| -Install \<key\> | \[兼容别名\] 等同 `-Resolve`；skill 已上架，不再需要下载 |
+| -OutDir | \[已废弃\] 早期 `-Install` 的下载目录，现已无作用 |
 
 下面用 `$RUN` 代表入口脚本的绝对路径，实际调用时替换掉：
 
@@ -265,8 +284,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File $RUN -Questions preflight
 # 对用户输入做路由（返回 preset / dev / clarify 建议）
 powershell -NoProfile -ExecutionPolicy Bypass -File $RUN -Route "帮我把这段录音转成文字"
 
-# 安装某个预设本地 skill
-powershell -NoProfile -ExecutionPolicy Bypass -File $RUN -Install asr
+# 把 key 解析成上架后的 skill 名（宿主按该名字调用；不会下载任何东西）
+powershell -NoProfile -ExecutionPolicy Bypass -File $RUN -Resolve asr
 ```
 
 ---
@@ -276,7 +295,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File $RUN -Install asr
 除了 `-Menu`（推荐预设问题），本技能还能输出统一契约的**准备好的问题**，供 agent 渲染成交互式清单
 （离线、无需网络）：
 
-- **preset** —— 14 条本地能力推荐（**从 [`scripts/skills_registry.json`](scripts/skills_registry.json) 单一来源生成**，与 `-Menu` 同源）。
+- **preset** —— 15 条本地能力推荐（**从 [`scripts/skills_registry.json`](scripts/skills_registry.json) 单一来源生成**，与 `-Menu` 同源）。
 - **preflight** —— 前置条件多选：是否 Intel AIPC、能否直连、要本地能力还是开发。
 - **clarify** —— 追问用户想用哪一类能力（语音/图像/文档/自动化/开发）。
 
@@ -355,7 +374,7 @@ install_dir=<解压到的本地路径>
 ## agent 使用约定
 
 - 被调用时先输出预设问题清单（`-Menu`），让用户知道能问什么。
-- 拿到用户具体请求后用 `-Route` 得到建议，再据此决定：`preset` → `-Install <key>` 并调用该 skill；
+- 拿到用户具体请求后用 `-Route` 得到建议，再据此决定：`preset` → `-Resolve <key>` 取名字并调用该 skill；
   `dev` → 转交对应开发类 skill；`clarify` → 先追问。
 - 解析每个 `[SKILL_RESULT]` 的 `status`；安装/调用失败不要谎报成功。
 - 仅限 Intel AIPC (Windows)、本地离线运行；非 Intel 硬件或云端推理请求要明确拒绝。
@@ -365,5 +384,5 @@ install_dir=<解压到的本地路径>
 ```powershell
 powershell -ExecutionPolicy Bypass -File test_learning_bot.ps1
 ```
-退出码 `0` = 所有检查通过。它会校验 registry（14 个预设 skill + release 地址）、menu / route 的
+退出码 `0` = 所有检查通过。它会校验 registry（15 个预设 skill，且不得残留下载地址）、menu / route 的
 `[SKILL_RESULT]` 契约，以及预设 vs. 非预设输入的路由建议是否符合预期。

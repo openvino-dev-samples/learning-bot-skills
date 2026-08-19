@@ -5,22 +5,24 @@ learning_bot.py - entry / router driver for the Learning Bot launcher skill.
 
 It does three things, all emitting a machine-parsable [SKILL_RESULT] block:
 
-  --menu                Print the recommended preset questions (map to the 14 local aipc-skills).
+  --menu                Print the recommended preset questions (map to the 15 local aipc-skills).
   --route "<text>"      Classify a user utterance -> a preset skill, a dev skill (ENV/FETCH/PIPE),
                         or "clarify". This is a SUGGESTION for the agent, not a hard decision.
-  --install <key>       Download + unzip the matching aipc-skill release zip locally.
+  --resolve <key>       Resolve a preset key to its published skill name (the host invokes it by
+                        that name). --install is kept as a backward-compatible alias.
 
-The 14 preset skills, the 3 dev skills and the release URLs live in scripts/skills_registry.json.
-Menu and routing are offline / network-free (stdlib only). Only --install touches the network.
+The 15 preset skills and the 3 dev skills live in scripts/skills_registry.json.
+
+这些本地能力 skill **已经上架**，宿主按 skill_name 直接调用即可 —— 本文件不再托管下载地址、
+也不负责下载解压。key 是仓库内部的稳定标识（路由/关键词/组合配方都用它），skill_name 才是
+对外调用名，两者不要混用。整个文件除 --capacity 外都不联网（stdlib only）。
 """
 import argparse
-import io
 import json
 import os
 import re
 import subprocess
 import sys
-import zipfile
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -200,11 +202,10 @@ def route(reg, text):
             preset_hits.append((sc, s["key"]))
     preset_hits.sort(reverse=True)
 
-    # OCR is offered on both NPU and GPU; pick by explicit device, default to NPU.
+    # 上架清单里 OCR 只有 NPU 版（Local OCR on NPU），没有单独的 GPU 版本，
+    # 所以用户即使点名 GPU 也只能给 ocr-npu —— 不要凭空造一个不存在的 skill。
     def normalize_ocr(key):
-        if key in ("ocr-npu", "ocr-gpu"):
-            if "gpu" in t:
-                return "ocr-gpu"
+        if key.startswith("ocr-"):
             return "ocr-npu"
         return key
 
@@ -267,13 +268,35 @@ def route(reg, text):
                 "reason": f"命中组合配方「{combo['name_cn']}」，以预设原子能力为基础拼装",
             })
 
-        # 3) 多原子命中 → 组合。先按 key 去重（OCR 的 npu/gpu 变体归一成一个）。
+        # 3) 多原子命中 → 组合。先按 key 去重（OCR 的设备变体归一成一个）。
         seen, keys = set(), []
         for _sc, k in preset_hits:
             nk = normalize_ocr(k)
             if nk not in seen:
                 seen.add(nk)
                 keys.append(nk)
+
+        # 同一个流水线阶段上的能力互为替代品，不能串成一条链 —— 「发票解析成结构化数据」
+        # 会同时命中 paddleocr-vl 和 mineru（都是 flow_order=1 的文档解析），串成
+        # paddleocr-vl→mineru 是没有意义的。同阶段只保留得分最高的那个。
+        stage_of = {p["key"]: (p.get("flow_order"), (p.get("io") or {}).get("out"))
+                    for p in reg["preset_skills"]}
+        score_of = {}
+        for sc, k in preset_hits:
+            nk = normalize_ocr(k)
+            score_of[nk] = max(score_of.get(nk, 0), sc)
+        best_at_stage, deduped = {}, []
+        for k in keys:
+            st = stage_of.get(k)
+            prev = best_at_stage.get(st)
+            if prev is None:
+                best_at_stage[st] = k
+                deduped.append(k)
+            elif score_of.get(k, 0) > score_of.get(prev, 0):
+                deduped[deduped.index(prev)] = k
+                best_at_stage[st] = k
+        keys = deduped
+
         if len(keys) > 1:
             stages = sorted(keys, key=lambda k: (order.get(k, 5), keys.index(k)))
             return _finish({
@@ -394,48 +417,35 @@ def cmd_questions(reg, qtype):
     return 0
 
 
-def cmd_install(reg, key, out_dir):
+def cmd_resolve(reg, key, out_dir=None):
+    """把内部 key 解析成上架后的官方 skill 名。
+
+    这些 skill 已经上架，宿主直接按 skill_name 调用即可，learning-bot 不再下载解压任何东西。
+    out_dir 参数保留只为兼容旧调用方（--install -OutDir），现在没有实际作用。
+    """
     presets = {s["key"]: s for s in reg["preset_skills"]}
     if key not in presets:
         emit([
             ("status", "error"),
-            ("action", "install"),
+            ("action", "resolve"),
             ("skill", key),
             ("reason", f"未知的 preset skill key：{key}；可选：{', '.join(presets)}"),
         ])
         return 1
 
     s = presets[key]
-    url = reg["release"]["base_url"] + s["zip"]
-    base = Path(out_dir) if out_dir else Path(os.path.expanduser("~")) / ".aipc-skills"
-    install_dir = base / key
-    install_dir.mkdir(parents=True, exist_ok=True)
-
-    try:
-        import urllib.request
-        req = urllib.request.Request(url, headers={"User-Agent": "learning-bot/1.0"})
-        with urllib.request.urlopen(req, timeout=60) as resp:
-            payload = resp.read()
-        with zipfile.ZipFile(io.BytesIO(payload)) as zf:
-            zf.extractall(install_dir)
-        emit([
-            ("status", "ok"),
-            ("action", "install"),
-            ("skill", key),
-            ("url", url),
-            ("install_dir", str(install_dir)),
-        ])
-        return 0
-    except Exception as e:  # network/unzip failure - stay honest, hand back the URL
-        emit([
-            ("status", "error"),
-            ("action", "install"),
-            ("skill", key),
-            ("url", url),
-            ("install_dir", str(install_dir)),
-            ("reason", f"{type(e).__name__}: {e}（可手动下载该 zip 到 install_dir 后解压）"),
-        ])
-        return 1
+    fields = [
+        ("status", "ok"),
+        ("action", "resolve"),
+        ("skill", key),
+        ("skill_name", s["skill_name"]),
+        ("name_cn", s["name_cn"]),
+        ("note", "already published; invoke it by skill_name (no download needed)"),
+    ]
+    if out_dir:
+        fields.append(("ignored_out_dir", out_dir))
+    emit(fields)
+    return 0
 
 
 # --------------------------------------------------------------------------
@@ -601,7 +611,10 @@ def main():
     g = ap.add_mutually_exclusive_group(required=True)
     g.add_argument("--menu", action="store_true", help="打印推荐给用户的预设问题")
     g.add_argument("--route", metavar="TEXT", help="对一句用户输入做路由建议")
-    g.add_argument("--install", metavar="KEY", help="下载并解压对应的 aipc-skill")
+    g.add_argument("--resolve", metavar="KEY",
+                   help="把 preset key 解析成上架后的官方 skill 名（宿主按该名字调用）")
+    g.add_argument("--install", metavar="KEY",
+                   help="[兼容别名] 等同 --resolve；这些 skill 已上架，不再需要下载")
     g.add_argument("--questions", metavar="TYPE",
                    choices=["preset", "preflight", "clarify", "all"],
                    help="输出准备好的问题（preset/preflight/clarify/all），[SKILL_QUESTIONS] 契约")
@@ -609,7 +622,8 @@ def main():
                    help="探测本机内存/显存预算（会调用 OpenVINO，首次较慢）")
     g.add_argument("--can-run", metavar="MODEL", dest="can_run",
                    help="判定某模型在本机跑不跑得动（默认按 INT4 估算）")
-    ap.add_argument("--out-dir", default=None, help="--install 的目标目录（默认 ~/.aipc-skills）")
+    ap.add_argument("--out-dir", default=None,
+                    help="[已废弃] 早期 --install 的下载目录；skill 已上架，此参数不再有作用")
     ap.add_argument("--params", type=float, default=None,
                     help="--can-run 的参数量（单位 B）；不给则从 model id 解析")
     ap.add_argument("--precision", default=None, choices=["INT4", "INT8", "FP16", "FP32"],
@@ -630,8 +644,10 @@ def main():
         return 0
     if args.questions is not None:
         return cmd_questions(reg, args.questions)
+    if args.resolve is not None:
+        return cmd_resolve(reg, args.resolve, args.out_dir)
     if args.install is not None:
-        return cmd_install(reg, args.install, args.out_dir)
+        return cmd_resolve(reg, args.install, args.out_dir)
     return 0
 
 

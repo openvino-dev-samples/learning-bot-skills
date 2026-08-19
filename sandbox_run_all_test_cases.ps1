@@ -33,12 +33,11 @@ $presetCases = @(
   @{ id="PR2";  prompt="把这段文字读出来，生成一段语音。";    expect="tts" },
   @{ id="PR3";  prompt="帮我实时翻译这段对话。";              expect="realtime-translator" },
   @{ id="PR4";  prompt="识别这张图片里的文字。";              expect="ocr-npu" },
-  @{ id="PR5";  prompt="用 GPU 识别这张图里的文字。";         expect="ocr-gpu" },
+  @{ id="PR5";  prompt="用 GPU 识别这张图里的文字。";         expect="ocr-npu" },
   @{ id="PR6";  prompt="帮我解析这个 PDF，转成 Markdown。";    expect="mineru" },
   @{ id="PR7";  prompt="根据这段描述生成一张图片。";          expect="txt2img" },
   @{ id="PR8";  prompt="基于这张图重绘一张新图。";            expect="img2img" },
   @{ id="PR9";  prompt="根据这段描述生成一段视频。";          expect="txt2video" },
-  @{ id="PR10"; prompt="把这张模糊的图片变清晰、放大。";      expect="sr" },
   @{ id="PR11"; prompt="检测这张图片里有哪些物体。";          expect="yolo26" },
   @{ id="PR12"; prompt="帮我截个屏，然后回答屏幕内容的问题。"; expect="screenshot-qa" },
   @{ id="PR13"; prompt="帮我自动操作电脑完成某个任务。";      expect="computer-use" },
@@ -59,7 +58,7 @@ Write-Host ""
 Write-Host "=== Section 2: Startup / Discovery (ST1-ST2) ===" -ForegroundColor Cyan
 $menu = & $Py $Bot --menu 2>&1 | Out-String
 Assert "ST1 menu emits SKILL_RESULT block"       ($menu -match "\[SKILL_RESULT\]")
-Assert "ST1 menu count=14"                       ($menu -match "count=14")
+Assert "ST1 menu count=15"                       ($menu -match "count=15")
 $allKeysPresent = $true
 foreach ($c in $presetCases) {
   if ($menu -notmatch "\[$([regex]::Escape($c.expect))\]") { $allKeysPresent = $false; break }
@@ -86,7 +85,7 @@ foreach ($c in $devCases) {
   Assert "$($c.id) target=$($c.expect)"      ($tgt -eq $c.expect) "got target=$tgt"
 }
 
-# ----- compose (CO1-CO7) — 以 14 个预设原子能力为基础拼装 -----
+# ----- compose (CO1-CO7) — 以 15 个预设原子能力为基础拼装 -----
 # 这一节验证核心原则：预设能力是原子积木，优先拿它们拼；开发类 skill 只在链条有缺口
 # （gaps）或需要服务化（assist）时出现，而不是一没命中单个预设就整个交出去。
 Write-Host ""
@@ -95,7 +94,6 @@ $composeCases = @(
   @{ id="CO1"; prompt="把这张图里的文字提取出来，然后读给我听。";        targets="ocr-npu,tts" },
   @{ id="CO2"; prompt="把这段英文录音转成文字再翻译成中文。";            targets="asr,realtime-translator" },
   @{ id="CO3"; prompt="把这本扫描版 PDF 转成能朗读的有声书。";           targets="mineru,tts" },
-  @{ id="CO4"; prompt="根据这段描述生成一张图，再把它变清晰放大。";       targets="txt2img,sr" },
   @{ id="CO5"; prompt="帮我做一个开会用的实时字幕助手。";                targets="asr,realtime-translator" },
   @{ id="CO6"; prompt="把 whisper→LLM→TTS 组成流水线并部署成服务。";    targets="asr,tts"; assist="openvino-pipeline-optimization" }
 )
@@ -186,7 +184,7 @@ Assert "NG3 don't fake -> not preset" ($s -ne "preset") "got scope=$s"
 
 # NG4: install all 14 in one shot — bulk action is not a preset; routed to a
 # dev skill so the agent can confirm and narrow scope before downloading.
-$b = Route-Block "把 14 个本地 skill 一次性全装到我电脑上。"
+$b = Route-Block "把 15 个本地 skill 一次性全装到我电脑上。"
 $s = Route-Value $b "scope"
 Assert "NG4 bulk install -> not preset" ($s -ne "preset") "got scope=$s"
 

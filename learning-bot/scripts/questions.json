@@ -23,7 +23,7 @@
       "multiselect": false,
       "options": [
         { "key": "speech", "label": "语音（转文字 / 合成 / 实时翻译）" },
-        { "key": "image", "label": "图像（文生图 / 图生图 / 超分 / 目标检测）" },
+        { "key": "image", "label": "图像（文生图 / 图生图 / 目标检测）" },
         { "key": "doc", "label": "文档（OCR / PDF 解析 / 截图问答）" },
         { "key": "automation", "label": "自动化 / 系统（电脑自动化 / 显存查看）" },
         { "key": "dev", "label": "以上都不是，我要做开发 / 构建" }

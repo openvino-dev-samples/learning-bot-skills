@@ -2,21 +2,22 @@
   Learning Bot launcher - orchestrator entry point.
 
   Starts the Learning Bot: recommends the preset questions, routes a user utterance to a
-  preset local skill (14 aipc-skills) or a dev skill (ENV/FETCH/PIPE), and can install a
-  preset skill locally. All logic lives in scripts/learning_bot.py (stdlib only; menu and
-  routing are offline, only -Install touches the network).
+  preset local skill (15 published aipc-skills) or a dev skill (ENV/FETCH/PIPE), and can
+  resolve a preset key to its published skill name. All logic lives in scripts/learning_bot.py (stdlib only; menu and
+  routing are offline; the 15 local skills are already published and are invoked by name).
 
   Usage:
     run.ps1 -Menu                         # 打印推荐给用户的预设问题
     run.ps1 -Questions preflight          # 输出准备好的问题（preset/preflight/clarify/all）
     run.ps1 -Route "帮我把录音转成文字"    # 对一句用户输入给出路由建议
-    run.ps1 -Install asr [-OutDir C:\path] # 下载并解压对应的 aipc-skill
+    run.ps1 -Resolve asr                  # 把 key 解析成上架后的官方 skill 名
 #>
 [CmdletBinding()]
 param(
   [switch]$Menu,
   [ValidateSet("preset","preflight","clarify","all")][string]$Questions,
   [string]$Route,
+  [string]$Resolve,
   [string]$Install,
   [string]$OutDir,
   [switch]$Capacity,
@@ -39,7 +40,7 @@ if ($Rest -and $Rest.Count -gt 0) {
   Write-Host "skill=learning-bot"
   Write-Host "reason=unknown-argument"
   Write-Host ("unknown=" + ($Rest -join " "))
-  Write-Host "valid_params=-Menu | -Questions preset|preflight|clarify|all | -Route <text> | -Install <key> [-OutDir <path>] | -Capacity | -CanRun <model> [-Params <n>] [-Precision INT4|INT8|FP16|FP32]"
+  Write-Host "valid_params=-Menu | -Questions preset|preflight|clarify|all | -Route <text> | -Resolve <key> | -Install <key> (兼容别名) | -Capacity | -CanRun <model> [-Params <n>] [-Precision INT4|INT8|FP16|FP32]"
   Write-Host "note=unrecognized argument; nothing was executed"
   Write-Host "[/SKILL_RESULT]"
   exit 1
@@ -90,7 +91,12 @@ if ($CanRun) {
   & $py @crArgs
   exit $LASTEXITCODE
 }
+if ($Resolve) {
+  & $py $Bot --resolve $Resolve
+  exit $LASTEXITCODE
+}
 if ($Install) {
+  # -Install 保留为兼容别名：这些 skill 已上架，不再下载，直接解析成官方名。
   if ($OutDir) { & $py $Bot --install $Install --out-dir $OutDir }
   else         { & $py $Bot --install $Install }
   exit $LASTEXITCODE

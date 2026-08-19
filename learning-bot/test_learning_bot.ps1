@@ -2,8 +2,8 @@
   Smoke test for the learning-bot launcher skill.
 
   Offline & network-free: exercises menu + routing (stdlib-only) and validates the skills
-  registry (14 preset skills + release URL) and the [SKILL_RESULT] contracts. It does NOT
-  download any zip or require a live network (-Install is not exercised here).
+  registry (15 published preset skills) and the [SKILL_RESULT] contracts. Nothing here
+  touches the network: the skills are already published and are invoked by skill_name.
 
   Usage:  powershell -ExecutionPolicy Bypass -File test_learning_bot.ps1
   Exit code 0 = all tests passed, 1 = one or more failed.
@@ -38,29 +38,33 @@ Check "py_compile learning_bot.py" { & $Py -m py_compile $Bot; $LASTEXITCODE -eq
 Check "--menu exit 0"             { $LASTEXITCODE -eq 0 }
 
 Write-Host ""
-Write-Host "2. Registry is well-formed (14 preset skills + release + 3 dev skills)" -ForegroundColor White
+Write-Host "2. Registry is well-formed (15 preset skills + 3 dev skills)" -ForegroundColor White
 $reg = $null
 try { $reg = Get-Content -Raw -Encoding UTF8 $Registry | ConvertFrom-Json } catch { $reg = $null }
 Check "registry parses as JSON"        { $null -ne $reg }
-Check "release base_url present"       { $reg.release.base_url -match "^https://github.com/makejiang/aipc-skills/releases/download/1\.0\.6/" }
-Check "14 preset skills"               { $reg.preset_skills.Count -eq 14 }
+Check "no download URLs in the registry" {
+  # skill 已上架，按 skill_name 调用；registry 里不应再残留 release/base_url/zip。
+  (-not $reg.release) -and ((($reg.preset_skills | Where-Object { $_.zip }) | Measure-Object).Count -eq 0)
+}
+Check "15 preset skills"               { $reg.preset_skills.Count -eq 15 }
 Check "3 dev skills (ENV/FETCH/PIPE)"  { $reg.dev_skills.Count -eq 3 }
-Check "every preset has key/zip/question/keywords" {
-  $bad = $reg.preset_skills | Where-Object { -not $_.key -or -not $_.zip -or -not $_.question -or -not $_.keywords }
+Check "every preset has key/skill_name/question/keywords" {
+  $bad = $reg.preset_skills | Where-Object { -not $_.key -or -not $_.skill_name -or -not $_.question -or -not $_.keywords }
   ($bad | Measure-Object).Count -eq 0
 }
-$expectedKeys = @("asr","tts","realtime-translator","ocr-npu","ocr-gpu","mineru","txt2img","img2img","txt2video","sr","yolo26","screenshot-qa","computer-use","vram")
-Check "all 14 expected keys present" {
+# 与 Intel AI PC Skills 清单（docx）逐条对应的 15 个已上架能力
+$expectedKeys = @("asr","tts","txt2img","computer-use","ocr-npu","mineru","screenshot-qa","vram","img2img","realtime-translator","txt2video","paddleocr-vl","yolo26","desktop-pet","game-guide")
+Check "all 15 expected keys present" {
   $have = $reg.preset_skills | ForEach-Object { $_.key }
   ($expectedKeys | Where-Object { $have -notcontains $_ } | Measure-Object).Count -eq 0
 }
 
 Write-Host ""
-Write-Host "3. Menu emits a valid [SKILL_RESULT] (action=menu, count=14)" -ForegroundColor White
+Write-Host "3. Menu emits a valid [SKILL_RESULT] (action=menu, count=15)" -ForegroundColor White
 $menu = & $Py $Bot --menu 2>&1 | Out-String
 Check "menu SKILL_RESULT block" { $menu -match "\[SKILL_RESULT\]" -and $menu -match "\[/SKILL_RESULT\]" }
 Check "menu action=menu"        { $menu -match "action=menu" }
-Check "menu count=14"           { $menu -match "count=14" }
+Check "menu count=15"           { $menu -match "count=15" }
 
 Write-Host ""
 Write-Host "4. Routing: preset inputs map to the expected preset skill" -ForegroundColor White
@@ -69,12 +73,11 @@ $presetCases = @{
   "把这段文字读出来生成语音"        = "tts"
   "帮我实时翻译这段对话"            = "realtime-translator"
   "识别这张图片里的文字"            = "ocr-npu"
-  "用 GPU 识别这张图里的文字"       = "ocr-gpu"
+  "用 GPU 识别这张图里的文字"       = "ocr-npu"
   "帮我解析这个 PDF 转成 markdown"  = "mineru"
   "根据这段描述生成一张图片"        = "txt2img"
   "基于这张图重绘一张新图"          = "img2img"
   "根据描述生成一段视频"            = "txt2video"
-  "把这张模糊的图片变清晰放大"      = "sr"
   "检测这张图片里有哪些物体"        = "yolo26"
   "帮我截个屏回答屏幕内容的问题"    = "screenshot-qa"
   "帮我自动操作电脑完成任务"        = "computer-use"
@@ -95,7 +98,6 @@ $composeCases = @{
   "把这张图里的文字提取出来，然后读给我听"   = "ocr-npu,tts"
   "把这段英文录音转成文字再翻译成中文"       = "asr,realtime-translator"
   "把这本扫描版 PDF 转成能朗读的有声书"      = "mineru,tts"
-  "根据这段描述生成一张图，再把它变清晰放大" = "txt2img,sr"
   "帮我做一个开会用的实时字幕助手"           = "asr,realtime-translator"
 }
 foreach ($k in $composeCases.Keys) {
@@ -196,14 +198,14 @@ foreach ($t in @("preset","preflight","clarify","all")) {
   $qo = & $Py $Bot --questions $t 2>&1 | Out-String
   Check "questions --questions $t valid block" { Test-Questions "learning-bot" $qo }
 }
-# preset is single-sourced from the registry (14 preset skills)
+# preset is single-sourced from the registry (15 preset skills)
 $qp = & $Py $Bot --questions preset 2>&1 | Out-String
 $qpCount = if ($qp -match "count=(\d+)") { [int]$Matches[1] } else { -1 }
-Check "preset question offers all 14 skills (5th option = ... or block options)" {
+Check "preset question offers all 15 skills" {
   $dt = ($qp -split "`r?`n" | Where-Object { $_ -like "data=*" } | Select-Object -First 1)
   if (-not $dt) { return $false }
   try { $arr = @($dt.Substring(5) | ConvertFrom-Json) } catch { return $false }
-  ($arr[0].options | Measure-Object).Count -eq 14
+  ($arr[0].options | Measure-Object).Count -eq 15
 }
 
 Write-Host ""

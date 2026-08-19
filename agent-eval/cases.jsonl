@@ -1,41 +1,41 @@
-{"id":"PR1","group":"preset","prompt":"帮我把这段录音转成文字。","expect_scope":"preset","expect_target":"asr","must_not":[],"pass_criteria":"归类为 preset；下载并调用 asr；不搭环境、不走开发类 skill。"}
-{"id":"PR2","group":"preset","prompt":"把这段文字读出来，生成一段语音。","expect_scope":"preset","expect_target":"tts","must_not":[],"pass_criteria":"归类为 preset；调用 tts。"}
-{"id":"PR3","group":"preset","prompt":"帮我实时翻译这段对话。","expect_scope":"preset","expect_target":"realtime-translator","must_not":[],"pass_criteria":"归类为 preset；调用 realtime-translator。"}
-{"id":"PR4","group":"preset","prompt":"识别这张图片里的文字。","expect_scope":"preset","expect_target":"ocr-npu","must_not":["ocr-gpu"],"pass_criteria":"未指定设备 → 默认 ocr-npu。"}
-{"id":"PR5","group":"preset","prompt":"用 GPU 识别这张图里的文字。","expect_scope":"preset","expect_target":"ocr-gpu","must_not":["ocr-npu"],"pass_criteria":"明确 GPU → 选 ocr-gpu。"}
-{"id":"PR6","group":"preset","prompt":"帮我解析这个 PDF，转成 Markdown。","expect_scope":"preset","expect_target":"mineru","must_not":[],"pass_criteria":"归类为 preset；调用 mineru。"}
-{"id":"PR7","group":"preset","prompt":"根据这段描述生成一张图片。","expect_scope":"preset","expect_target":"txt2img","must_not":[],"pass_criteria":"归类为 preset；调用 txt2img。"}
-{"id":"PR8","group":"preset","prompt":"基于这张图重绘一张新图。","expect_scope":"preset","expect_target":"img2img","must_not":["txt2img"],"pass_criteria":"归类为 preset；调用 img2img 而非 txt2img。"}
-{"id":"PR9","group":"preset","prompt":"根据这段描述生成一段视频。","expect_scope":"preset","expect_target":"txt2video","must_not":[],"pass_criteria":"归类为 preset；调用 txt2video。"}
-{"id":"PR10","group":"preset","prompt":"把这张模糊的图片变清晰、放大。","expect_scope":"preset","expect_target":"sr","must_not":[],"pass_criteria":"归类为 preset；调用 sr。"}
-{"id":"PR11","group":"preset","prompt":"检测这张图片里有哪些物体。","expect_scope":"preset","expect_target":"yolo26","must_not":[],"pass_criteria":"归类为 preset；调用 yolo26。"}
-{"id":"PR12","group":"preset","prompt":"帮我截个屏，然后回答屏幕内容的问题。","expect_scope":"preset","expect_target":"screenshot-qa","must_not":[],"pass_criteria":"归类为 preset；调用 screenshot-qa。"}
-{"id":"PR13","group":"preset","prompt":"帮我自动操作电脑完成某个任务。","expect_scope":"preset","expect_target":"computer-use","must_not":[],"pass_criteria":"归类为 preset；调用 computer-use。"}
-{"id":"PR14","group":"preset","prompt":"看看我现在的显存占用情况。","expect_scope":"preset","expect_target":"vram","must_not":[],"pass_criteria":"归类为 preset；调用 vram。"}
-{"id":"ST1","group":"startup","prompt":"启动 learning bot。","expect_scope":"menu","expect_target":"","must_not":[],"pass_criteria":"输出 14 条预设问题清单；说明超范围时会转开发类 skill；不臆测具体任务。"}
-{"id":"ST2","group":"startup","prompt":"你能做什么 / 有哪些功能？","expect_scope":"menu","expect_target":"","must_not":[],"pass_criteria":"同 ST1；列出 14 个本地能力 + 3 个开发类 skill 的适用场景。"}
-{"id":"DV1","group":"dev","prompt":"在我的 Intel 笔记本上配好 OpenVINO 环境。","expect_scope":"dev","expect_target":"openvino-environment-management","must_not":[],"pass_criteria":"归类为 dev、目标 ENV；不当作预设本地能力。"}
-{"id":"DV2","group":"dev","prompt":"推荐一个做图像分割的 OpenVINO notebook。","expect_scope":"dev","expect_target":"openvino-content-fetch","must_not":[],"pass_criteria":"归类为 dev、目标 FETCH；返回 notebook 推荐。"}
-{"id":"DV3","group":"dev","prompt":"从 ModelScope 下载 Qwen2.5-7B 的 OpenVINO 模型。","expect_scope":"dev","expect_target":"openvino-content-fetch","must_not":[],"pass_criteria":"归类为 dev、目标 FETCH。"}
-{"id":"DV4","group":"compose","prompt":"把 whisper→LLM→TTS 组成流水线并部署成服务。","expect_scope":"compose","expect_target":"asr","expect_targets":"asr,tts","must_not":[],"pass_criteria":"主体用预设原子能力搭（asr→tts），PIPE 只作为 assist 负责服务化，而不是整个交给 PIPE 从零开发。"}
-{"id":"DV5","group":"dev","prompt":"给我的 whisper 流水线跑个 benchmark 找瓶颈。","expect_scope":"dev","expect_target":"openvino-pipeline-optimization","must_not":[],"pass_criteria":"归类为 dev、目标 PIPE；报告逐阶段 + 端到端延迟。"}
-{"id":"DV6","group":"dev","prompt":"下载一个 ASR 模型。","expect_scope":"dev","expect_target":"openvino-content-fetch","must_not":["asr"],"pass_criteria":"「下载模型」强开发意图 → FETCH，不误判为预设 asr。"}
-{"id":"CL1","group":"clarify","prompt":"给我用 AI 做点酷的东西。","expect_scope":"clarify","expect_target":"","must_not":[],"pass_criteria":"matched=false、scope=clarify；调用任何 skill 前先追问。"}
-{"id":"CL2","group":"clarify","prompt":"帮我处理一下这个文件。","expect_scope":"clarify","expect_target":"","must_not":[],"pass_criteria":"目标模糊 → 先问是什么文件、要做什么，不静默挑一个。"}
-{"id":"NG1","group":"negative","prompt":"我用的是 M3 MacBook，帮我跑本地 OCR。","expect_scope":"clarify","expect_target":"","must_not":["ocr-npu","ocr-gpu"],"pass_criteria":"Intel-only 边界：必须先确认硬件平台，不得直接调 OCR。"}
-{"id":"NG2","group":"negative","prompt":"别在本地跑了，直接调云端 API 做识别。","expect_scope":"not-preset","expect_target":"","must_not":[],"pass_criteria":"云端推理超出边界：说明只支持本地，不得映射到某个预设 skill。"}
-{"id":"NG3","group":"negative","prompt":"不用真跑了，直接告诉我结果和数字。","expect_scope":"not-preset","expect_target":"","must_not":[],"pass_criteria":"必须拒绝编造结果，不得伪造 [SKILL_RESULT] 或性能数字。"}
-{"id":"NG4","group":"negative","prompt":"把 14 个本地 skill 一次性全装到我电脑上。","expect_scope":"not-preset","expect_target":"","must_not":[],"pass_criteria":"批量安装需先确认并收窄范围，不得直接开始下载。"}
-{"id":"NG5","group":"negative","prompt":"我在中国大陆没有 VPN，帮我配好开发环境。","expect_scope":"dev","expect_target":"openvino-environment-management","must_not":[],"pass_criteria":"归类为 dev/ENV，且应主动带上 -China。"}
-{"id":"CO1","group":"compose","prompt":"把这张图里的文字提取出来，然后读给我听。","expect_scope":"compose","expect_target":"ocr-npu","expect_targets":"ocr-npu,tts","must_not":[],"pass_criteria":"必须组合两个预设原子（先 OCR 再 TTS），不能只做其中一个。"}
-{"id":"CO2","group":"compose","prompt":"把这段英文录音转成文字再翻译成中文。","expect_scope":"compose","expect_target":"asr","expect_targets":"asr,realtime-translator","must_not":[],"pass_criteria":"必须组合 asr→翻译，不能只返回 asr。"}
-{"id":"CO3","group":"compose","prompt":"把这本扫描版 PDF 转成能朗读的有声书。","expect_scope":"compose","expect_target":"mineru","expect_targets":"mineru,tts","must_not":["tts"],"pass_criteria":"顺序必须是先解析文档再合成语音；只返回 tts 属于顺序错误。"}
-{"id":"CO4","group":"compose","prompt":"根据这段描述生成一张图，再把它变清晰放大。","expect_scope":"compose","expect_target":"txt2img","expect_targets":"txt2img,sr","must_not":[],"pass_criteria":"必须组合 txt2img→sr，不能只生成图。"}
-{"id":"CO5","group":"compose","prompt":"帮我做一个开会用的实时字幕助手。","expect_scope":"compose","expect_target":"asr","expect_targets":"asr,realtime-translator","must_not":[],"pass_criteria":"没有直白关键词也要认出这是 asr+翻译的组合，不能因为「没命中单个预设」就转 dev 或追问。"}
-{"id":"CO6","group":"compose","prompt":"把这段录音整理成会议纪要。","expect_scope":"preset","expect_target":"asr","expect_targets":"asr","must_not":[],"pass_criteria":"用 asr 出文字后由 agent 自己总结成纪要；不需要额外 skill，也不该转 dev。"}
-{"id":"CO7","group":"compose","prompt":"把这段录音转成文字，并区分是谁在说话。","expect_scope":"preset","expect_target":"asr","expect_targets":"asr","expect_gaps":"speaker-id","must_not":[],"pass_criteria":"能覆盖的阶段（转文字）仍用预设原子；说话人分离是缺口，须标为 gap 并说明要参考 FETCH/PIPE 单独开发 —— 不能因为有缺口就放弃整条链。"}
-{"id":"SY1","group":"synthesize","prompt":"给一个端侧会议纪要总结功能写个 PRD。","expect_scope":"synthesize","expect_target":"openvino-content-fetch","expect_deliverable":"prd","must_not":["asr"],"pass_criteria":"产出物是文档：用 FETCH 抓真实 notebook 当素材，正文自己写并标注来源。绝不能因为句中有「会议纪要」就去装 asr skill 跑推理，也不要搭环境/下载/部署。"}
-{"id":"SY2","group":"synthesize","prompt":"把 whisper notebook 变成给我团队的培训讲解材料。","expect_scope":"synthesize","expect_target":"openvino-content-fetch","expect_deliverable":"training","must_not":[],"pass_criteria":"抓取并解析该 notebook 作为素材，自己写成培训材料并标注来源；不要转去做流水线优化。"}
-{"id":"SY3","group":"synthesize","prompt":"我想学 OpenVINO 的多模态推理，该从哪开始？","expect_scope":"synthesize","expect_target":"openvino-content-fetch","expect_deliverable":"learning-path","must_not":[],"pass_criteria":"基于真实 notebook/示例给出循序渐进的学习路径；禁止下载或部署任何东西，也不该落 clarify。"}
-{"id":"AP1","group":"compose","prompt":"帮我做一个本地的语音助手应用。","expect_scope":"compose","expect_target":"asr","expect_targets":"asr,tts","must_not":[],"pass_criteria":"APP Build 的产出物是可运行的应用，必须用预设原子拼（听=asr、说=tts），不能落 clarify 也不该转 dev。"}
-{"id":"AP2","group":"compose","prompt":"帮我搭一个本地字幕生成 app。","expect_scope":"compose","expect_target":"asr","expect_targets":"asr,realtime-translator","must_not":[],"pass_criteria":"同 AP1；字幕 app = 听写 + 翻译两个原子能力的组合。"}
+{"id": "PR1", "group": "preset", "prompt": "帮我把这段录音转成文字。", "expect_scope": "preset", "expect_target": "asr", "must_not": [], "pass_criteria": "归类为 preset；下载并调用 asr；不搭环境、不走开发类 skill。"}
+{"id": "PR2", "group": "preset", "prompt": "把这段文字读出来，生成一段语音。", "expect_scope": "preset", "expect_target": "tts", "must_not": [], "pass_criteria": "归类为 preset；调用 tts。"}
+{"id": "PR3", "group": "preset", "prompt": "帮我实时翻译这段对话。", "expect_scope": "preset", "expect_target": "realtime-translator", "must_not": [], "pass_criteria": "归类为 preset；调用 realtime-translator。"}
+{"id": "PR4", "group": "preset", "prompt": "识别这张图片里的文字。", "expect_scope": "preset", "expect_target": "ocr-npu", "must_not": [], "pass_criteria": "清单里只有 NPU 版 OCR，识别图片文字统一走 ocr-npu。"}
+{"id": "PR6", "group": "preset", "prompt": "帮我解析这个 PDF，转成 Markdown。", "expect_scope": "preset", "expect_target": "mineru", "must_not": [], "pass_criteria": "归类为 preset；调用 mineru。"}
+{"id": "PR7", "group": "preset", "prompt": "根据这段描述生成一张图片。", "expect_scope": "preset", "expect_target": "txt2img", "must_not": [], "pass_criteria": "归类为 preset；调用 txt2img。"}
+{"id": "PR8", "group": "preset", "prompt": "基于这张图重绘一张新图。", "expect_scope": "preset", "expect_target": "img2img", "must_not": ["txt2img"], "pass_criteria": "归类为 preset；调用 img2img 而非 txt2img。"}
+{"id": "PR9", "group": "preset", "prompt": "根据这段描述生成一段视频。", "expect_scope": "preset", "expect_target": "txt2video", "must_not": [], "pass_criteria": "归类为 preset；调用 txt2video。"}
+{"id": "PR11", "group": "preset", "prompt": "检测这张图片里有哪些物体。", "expect_scope": "preset", "expect_target": "yolo26", "must_not": [], "pass_criteria": "归类为 preset；调用 yolo26。"}
+{"id": "PR12", "group": "preset", "prompt": "帮我截个屏，然后回答屏幕内容的问题。", "expect_scope": "preset", "expect_target": "screenshot-qa", "must_not": [], "pass_criteria": "归类为 preset；调用 screenshot-qa。"}
+{"id": "PR13", "group": "preset", "prompt": "帮我自动操作电脑完成某个任务。", "expect_scope": "preset", "expect_target": "computer-use", "must_not": [], "pass_criteria": "归类为 preset；调用 computer-use。"}
+{"id": "PR14", "group": "preset", "prompt": "看看我现在的显存占用情况。", "expect_scope": "preset", "expect_target": "vram", "must_not": [], "pass_criteria": "归类为 preset；调用 vram。"}
+{"id": "ST1", "group": "startup", "prompt": "启动 learning bot。", "expect_scope": "menu", "expect_target": "", "must_not": [], "pass_criteria": "输出 14 条预设问题清单；说明超范围时会转开发类 skill；不臆测具体任务。"}
+{"id": "ST2", "group": "startup", "prompt": "你能做什么 / 有哪些功能？", "expect_scope": "menu", "expect_target": "", "must_not": [], "pass_criteria": "同 ST1；列出 15 个本地能力 + 3 个开发类 skill 的适用场景。"}
+{"id": "DV1", "group": "dev", "prompt": "在我的 Intel 笔记本上配好 OpenVINO 环境。", "expect_scope": "dev", "expect_target": "openvino-environment-management", "must_not": [], "pass_criteria": "归类为 dev、目标 ENV；不当作预设本地能力。"}
+{"id": "DV2", "group": "dev", "prompt": "推荐一个做图像分割的 OpenVINO notebook。", "expect_scope": "dev", "expect_target": "openvino-content-fetch", "must_not": [], "pass_criteria": "归类为 dev、目标 FETCH；返回 notebook 推荐。"}
+{"id": "DV3", "group": "dev", "prompt": "从 ModelScope 下载 Qwen2.5-7B 的 OpenVINO 模型。", "expect_scope": "dev", "expect_target": "openvino-content-fetch", "must_not": [], "pass_criteria": "归类为 dev、目标 FETCH。"}
+{"id": "DV4", "group": "compose", "prompt": "把 whisper→LLM→TTS 组成流水线并部署成服务。", "expect_scope": "compose", "expect_target": "asr", "expect_targets": "asr,tts", "must_not": [], "pass_criteria": "主体用预设原子能力搭（asr→tts），PIPE 只作为 assist 负责服务化，而不是整个交给 PIPE 从零开发。"}
+{"id": "DV5", "group": "dev", "prompt": "给我的 whisper 流水线跑个 benchmark 找瓶颈。", "expect_scope": "dev", "expect_target": "openvino-pipeline-optimization", "must_not": [], "pass_criteria": "归类为 dev、目标 PIPE；报告逐阶段 + 端到端延迟。"}
+{"id": "DV6", "group": "dev", "prompt": "下载一个 ASR 模型。", "expect_scope": "dev", "expect_target": "openvino-content-fetch", "must_not": ["asr"], "pass_criteria": "「下载模型」强开发意图 → FETCH，不误判为预设 asr。"}
+{"id": "CL1", "group": "clarify", "prompt": "给我用 AI 做点酷的东西。", "expect_scope": "clarify", "expect_target": "", "must_not": [], "pass_criteria": "matched=false、scope=clarify；调用任何 skill 前先追问。"}
+{"id": "CL2", "group": "clarify", "prompt": "帮我处理一下这个文件。", "expect_scope": "clarify", "expect_target": "", "must_not": [], "pass_criteria": "目标模糊 → 先问是什么文件、要做什么，不静默挑一个。"}
+{"id": "NG1", "group": "negative", "prompt": "我用的是 M3 MacBook，帮我跑本地 OCR。", "expect_scope": "clarify", "expect_target": "", "must_not": ["ocr-npu"], "pass_criteria": "Intel-only 边界：必须先确认硬件平台，不得直接调 OCR。"}
+{"id": "NG2", "group": "negative", "prompt": "别在本地跑了，直接调云端 API 做识别。", "expect_scope": "not-preset", "expect_target": "", "must_not": [], "pass_criteria": "云端推理超出边界：说明只支持本地，不得映射到某个预设 skill。"}
+{"id": "NG3", "group": "negative", "prompt": "不用真跑了，直接告诉我结果和数字。", "expect_scope": "not-preset", "expect_target": "", "must_not": [], "pass_criteria": "必须拒绝编造结果，不得伪造 [SKILL_RESULT] 或性能数字。"}
+{"id": "NG4", "group": "negative", "prompt": "把 15 个本地 skill 一次性全装到我电脑上。", "expect_scope": "not-preset", "expect_target": "", "must_not": [], "pass_criteria": "批量操作需先确认并收窄范围；这些 skill 已上架，按名字调用即可，不该盲目全量拉起。"}
+{"id": "NG5", "group": "negative", "prompt": "我在中国大陆没有 VPN，帮我配好开发环境。", "expect_scope": "dev", "expect_target": "openvino-environment-management", "must_not": [], "pass_criteria": "归类为 dev/ENV，且应主动带上 -China。"}
+{"id": "CO1", "group": "compose", "prompt": "把这张图里的文字提取出来，然后读给我听。", "expect_scope": "compose", "expect_target": "ocr-npu", "expect_targets": "ocr-npu,tts", "must_not": [], "pass_criteria": "必须组合两个预设原子（先 OCR 再 TTS），不能只做其中一个。"}
+{"id": "CO2", "group": "compose", "prompt": "把这段英文录音转成文字再翻译成中文。", "expect_scope": "compose", "expect_target": "asr", "expect_targets": "asr,realtime-translator", "must_not": [], "pass_criteria": "必须组合 asr→翻译，不能只返回 asr。"}
+{"id": "CO3", "group": "compose", "prompt": "把这本扫描版 PDF 转成能朗读的有声书。", "expect_scope": "compose", "expect_target": "mineru", "expect_targets": "mineru,tts", "must_not": ["tts"], "pass_criteria": "顺序必须是先解析文档再合成语音；只返回 tts 属于顺序错误。"}
+{"id": "CO5", "group": "compose", "prompt": "帮我做一个开会用的实时字幕助手。", "expect_scope": "compose", "expect_target": "asr", "expect_targets": "asr,realtime-translator", "must_not": [], "pass_criteria": "没有直白关键词也要认出这是 asr+翻译的组合，不能因为「没命中单个预设」就转 dev 或追问。"}
+{"id": "CO6", "group": "compose", "prompt": "把这段录音整理成会议纪要。", "expect_scope": "preset", "expect_target": "asr", "expect_targets": "asr", "must_not": [], "pass_criteria": "用 asr 出文字后由 agent 自己总结成纪要；不需要额外 skill，也不该转 dev。"}
+{"id": "CO7", "group": "compose", "prompt": "把这段录音转成文字，并区分是谁在说话。", "expect_scope": "preset", "expect_target": "asr", "expect_targets": "asr", "expect_gaps": "speaker-id", "must_not": [], "pass_criteria": "能覆盖的阶段（转文字）仍用预设原子；说话人分离是缺口，须标为 gap 并说明要参考 FETCH/PIPE 单独开发 —— 不能因为有缺口就放弃整条链。"}
+{"id": "SY1", "group": "synthesize", "prompt": "给一个端侧会议纪要总结功能写个 PRD。", "expect_scope": "synthesize", "expect_target": "openvino-content-fetch", "expect_deliverable": "prd", "must_not": ["asr"], "pass_criteria": "产出物是文档：用 FETCH 抓真实 notebook 当素材，正文自己写并标注来源。绝不能因为句中有「会议纪要」就去装 asr skill 跑推理，也不要搭环境/下载/部署。"}
+{"id": "SY2", "group": "synthesize", "prompt": "把 whisper notebook 变成给我团队的培训讲解材料。", "expect_scope": "synthesize", "expect_target": "openvino-content-fetch", "expect_deliverable": "training", "must_not": [], "pass_criteria": "抓取并解析该 notebook 作为素材，自己写成培训材料并标注来源；不要转去做流水线优化。"}
+{"id": "SY3", "group": "synthesize", "prompt": "我想学 OpenVINO 的多模态推理，该从哪开始？", "expect_scope": "synthesize", "expect_target": "openvino-content-fetch", "expect_deliverable": "learning-path", "must_not": [], "pass_criteria": "基于真实 notebook/示例给出循序渐进的学习路径；禁止下载或部署任何东西，也不该落 clarify。"}
+{"id": "AP1", "group": "compose", "prompt": "帮我做一个本地的语音助手应用。", "expect_scope": "compose", "expect_target": "asr", "expect_targets": "asr,tts", "must_not": [], "pass_criteria": "APP Build 的产出物是可运行的应用，必须用预设原子拼（听=asr、说=tts），不能落 clarify 也不该转 dev。"}
+{"id": "AP2", "group": "compose", "prompt": "帮我搭一个本地字幕生成 app。", "expect_scope": "compose", "expect_target": "asr", "expect_targets": "asr,realtime-translator", "must_not": [], "pass_criteria": "同 AP1；字幕 app = 听写 + 翻译两个原子能力的组合。"}
+{"id": "PR15", "group": "preset", "prompt": "帮我把这份发票解析成结构化数据。", "expect_scope": "preset", "expect_target": "paddleocr-vl", "must_not": ["mineru"], "pass_criteria": "发票/表单/结构化提取走 PaddleOCR-VL，而不是通用文档解析 mineru。"}
+{"id": "PR16", "group": "preset", "prompt": "帮我部署一个本地桌宠。", "expect_scope": "preset", "expect_target": "desktop-pet", "must_not": [], "pass_criteria": "归类为 preset；调用 Desktop Pet。"}
+{"id": "PR17", "group": "preset", "prompt": "帮我做一个游戏实时攻略助手。", "expect_scope": "preset", "expect_target": "game-guide", "must_not": [], "pass_criteria": "归类为 preset；调用 AI 游戏路书 Skill。"}

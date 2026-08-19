@@ -26,8 +26,10 @@ parsed — decide the next step from the block; never assume success.
 
 ### Local capabilities are atoms — compose them before reaching for a dev skill
 
-The 14 local aipc-skills (`asr`, `tts`, `realtime-translator`, `ocr-npu`/`ocr-gpu`, `mineru`,
-`txt2img`, `img2img`, `txt2video`, `sr`, `yolo26`, `screenshot-qa`, `computer-use`, `vram`) are
+The 15 published local aipc-skills (`asr`, `tts`, `realtime-translator`, `ocr-npu`, `mineru`,
+`txt2img`, `img2img`, `txt2video` (LightX2V), `paddleocr-vl`, `yolo26`, `screenshot-qa`,
+`computer-use`, `vram`, `desktop-pet`, `game-guide`) are **already published — invoke them by the
+name `learning-bot -Resolve <key>` returns; there is nothing to download.** They are
 **atomic building blocks**, not a lookup table. Decide in this order:
 
 1. Non-Intel hardware mentioned → confirm the platform first.
@@ -35,7 +37,7 @@ The 14 local aipc-skills (`asr`, `tts`, `realtime-translator`, `ocr-npu`/`ocr-gp
    IR, a benchmark report)? → go straight to a dev skill. Nothing else qualifies for this branch.
 3. Can **several** atoms be chained to do it? → **compose** them in data-flow order
    (`mineru→tts` for an audiobook, `asr→realtime-translator` for live subtitles, `ocr→tts` to read
-   a picture aloud, `txt2img→sr` for a high-res illustration).
+   a picture aloud).
 4. Can **one** atom do it? → call that one.
 5. Otherwise → dev skill, or ask.
 
@@ -43,7 +45,7 @@ Steps 3 and 4 both come **before** handing anything to a dev skill. "Deploy it a
 *not* a reason to skip them: build the chain out of atoms first, then use
 `openvino-pipeline-optimization` to turn it into a resident service.
 
-**When a chain has a gap** — a stage none of the 14 atoms covers (voice cloning, speaker
+**When a chain has a gap** — a stage none of the 15 atoms covers (voice cloning, speaker
 diarization, face recognition, segmentation, depth/3D, pose, source separation, video QA) — do
 **not** abandon the chain. Keep using atoms for every stage they do cover, and build only the
 missing stage yourself via `openvino-content-fetch` (find the model) →
@@ -101,7 +103,7 @@ serve anything unless the user explicitly asks — these are content deliverable
 These three are **not** extra local skills. There is nothing to install and no `[SKILL_RESULT]` to
 produce; the writing is your own work and the skill only supplies the source material. **APP Build
 is the opposite** — it is a runnable deliverable, so it goes through `scope=compose` and gets built
-out of the 14 atoms.
+out of the 15 atoms.
 
 
 ## State & recovery

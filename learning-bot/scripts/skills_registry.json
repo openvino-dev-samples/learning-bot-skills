@@ -1,210 +1,619 @@
 {
-  "release": {
-    "repo": "makejiang/aipc-skills",
-    "version": "1.0.6",
-    "base_url": "https://github.com/makejiang/aipc-skills/releases/download/1.0.6/"
-  },
+  "_publish_doc": "这 15 个本地能力 skill 已经上架，宿主可直接按 skill_name（Intel AI PC Skills 清单里的官方名）调用，learning-bot 不再托管下载地址、也不负责下载解压。key 是本仓库内部稳定标识，用于路由/关键词/组合配方；skill_name 才是对外调用名。两者不要混用。",
   "_flow_order_doc": "组合链的排序权重：0 capture / 1 extract(媒体→文本) / 2 generate(文本→媒体) / 3 transform(同模态加工) / 4 speak(链尾) / 9 util(不参与组合排序)。顺序有歧义时以 combos 配方表为准。",
   "preset_skills": [
     {
       "key": "asr",
+      "skill_name": "Local ASR",
       "name_cn": "本地语音识别 (ASR)",
       "question": "帮我把这段录音/语音转成文字。",
-      "zip": "skill-local-asr-1.0.6-20260628-001408.zip",
       "flow_order": 1,
-      "io": { "in": "audio", "out": "text" },
-      "keywords": ["语音转文字", "语音识别", "转录", "转成文字", "听写", "录音转文字", "把这段音频", "speech to text", "asr", "transcribe", "whisper", "录音"]
+      "io": {
+        "in": "audio",
+        "out": "text"
+      },
+      "keywords": [
+        "语音转文字",
+        "语音识别",
+        "转录",
+        "转成文字",
+        "听写",
+        "录音转文字",
+        "把这段音频",
+        "speech to text",
+        "asr",
+        "transcribe",
+        "whisper",
+        "录音"
+      ]
     },
     {
       "key": "tts",
+      "skill_name": "Local TTS",
       "name_cn": "本地语音合成 (TTS)",
       "question": "把这段文字读出来，生成一段语音。",
-      "zip": "skill-local-tts-1.0.6-20260628-001418.zip",
       "flow_order": 4,
-      "io": { "in": "text", "out": "audio" },
-      "keywords": ["文字转语音", "朗读", "读出来", "念出来", "语音合成", "生成语音", "配音", "tts", "text to speech", "读给我听", "念给我听", "读给我"]
-    },
-    {
-      "key": "realtime-translator",
-      "name_cn": "本地实时翻译",
-      "question": "帮我实时翻译这段对话/语音。",
-      "zip": "skill-local-realtime-translator-1.0.6-20260628-001416.zip",
-      "flow_order": 3,
-      "io": { "in": "text", "out": "text" },
-      "keywords": ["实时翻译", "同声传译", "同传", "边说边译", "实时口译", "会议翻译", "realtime translate", "live translation", "翻译成", "再翻译"]
-    },
-    {
-      "key": "ocr-npu",
-      "name_cn": "本地 OCR (NPU)",
-      "question": "用 NPU 识别这张图片里的文字。",
-      "zip": "skill-local-ocr-npu-1.0.6-20260628-001412.zip",
-      "flow_order": 1,
-      "io": { "in": "image", "out": "text" },
-      "keywords": ["ocr", "识别文字", "文字识别", "图片文字", "图片里的文字", "图里的文字", "提取文字", "提取图片文字", "识别图片", "扫描文字", "npu ocr", "text recognition"]
-    },
-    {
-      "key": "ocr-gpu",
-      "name_cn": "本地 OCR (GPU)",
-      "question": "用 GPU 识别这张图/文档里的文字。",
-      "zip": "skill-local-ocr-gpu-1.0.6-20260628-001411.zip",
-      "flow_order": 1,
-      "io": { "in": "image", "out": "text" },
-      "keywords": ["gpu ocr", "gpu 识别文字", "用 gpu 提取文字"]
-    },
-    {
-      "key": "mineru",
-      "name_cn": "本地文档解析 (MinerU)",
-      "question": "帮我解析这个 PDF，转成 Markdown / 结构化文本。",
-      "zip": "skill-local-mineru-1.0.6-20260628-001411.zip",
-      "flow_order": 1,
-      "io": { "in": "document", "out": "text" },
-      "keywords": ["pdf", "文档解析", "解析文档", "转markdown", "转 markdown", "文档转", "mineru", "扫描件", "扫描版", "论文解析", "版面分析", "parse document", "结构化文本", "解析成结构化", "卷宗", "研报"]
+      "io": {
+        "in": "text",
+        "out": "audio"
+      },
+      "keywords": [
+        "文字转语音",
+        "朗读",
+        "读出来",
+        "念出来",
+        "语音合成",
+        "生成语音",
+        "配音",
+        "tts",
+        "text to speech",
+        "读给我听",
+        "念给我听",
+        "读给我"
+      ]
     },
     {
       "key": "txt2img",
+      "skill_name": "Local T2I",
       "name_cn": "本地文生图 (Text-to-Image)",
       "question": "根据这段描述生成一张图片。",
-      "zip": "skill-local-txt2img-1.0.6-20260628-001419.zip",
       "flow_order": 2,
-      "io": { "in": "text", "out": "image" },
-      "keywords": ["文生图", "生成图片", "生成一张图", "画一张", "根据描述生成图", "text to image", "txt2img", "生成图像", "作画"]
-    },
-    {
-      "key": "img2img",
-      "name_cn": "本地图生图 (Image-to-Image)",
-      "question": "把这张图改成某种风格 / 基于这张图生成新图。",
-      "zip": "skill-local-img2img-1.0.6-20260628-001410.zip",
-      "flow_order": 3,
-      "io": { "in": "image", "out": "image" },
-      "keywords": ["图生图", "风格转换", "改图", "基于这张图", "图片编辑", "重绘", "img2img", "image to image"]
-    },
-    {
-      "key": "txt2video",
-      "name_cn": "本地文生视频 (Text-to-Video)",
-      "question": "根据这段描述生成一段视频。",
-      "zip": "skill-local-txt2video-1.0.6-20260628-001420.zip",
-      "flow_order": 2,
-      "io": { "in": "text", "out": "video" },
-      "keywords": ["文生视频", "生成视频", "生成一段视频", "text to video", "txt2video", "视频生成"]
-    },
-    {
-      "key": "sr",
-      "name_cn": "本地超分辨率 (Super-Resolution)",
-      "question": "把这张模糊 / 低清的图片变清晰、放大。",
-      "zip": "skill-local-sr-1.0.6-20260628-001418.zip",
-      "flow_order": 3,
-      "io": { "in": "image", "out": "image" },
-      "keywords": ["超分", "超分辨率", "放大图片", "变清晰", "高清化", "画质增强", "super resolution", "upscale", "清晰放大"]
-    },
-    {
-      "key": "yolo26",
-      "name_cn": "本地目标检测 (YOLO26)",
-      "question": "帮我检测这张图片里有哪些物体。",
-      "zip": "skill-local-yolo26-1.0.6-20260628-001421.zip",
-      "flow_order": 3,
-      "io": { "in": "image", "out": "labels" },
-      "keywords": ["目标检测", "物体检测", "检测物体", "识别物体", "检测", "物体", "哪些物体", "框出", "yolo", "detect objects", "object detection"]
-    },
-    {
-      "key": "screenshot-qa",
-      "name_cn": "本地截图问答",
-      "question": "帮我截个屏，然后回答关于屏幕内容的问题。",
-      "zip": "skill-local-screenshot-qa-1.0.6-20260628-001417.zip",
-      "flow_order": 0,
-      "io": { "in": "screen", "out": "text" },
-      "keywords": ["截图问答", "截屏", "屏幕问答", "截个屏", "屏幕内容", "看屏幕回答", "screenshot", "screen qa"]
+      "io": {
+        "in": "text",
+        "out": "image"
+      },
+      "keywords": [
+        "文生图",
+        "生成图片",
+        "生成一张图",
+        "画一张",
+        "根据描述生成图",
+        "text to image",
+        "txt2img",
+        "生成图像",
+        "作画"
+      ]
     },
     {
       "key": "computer-use",
+      "skill_name": "Local computer use",
       "name_cn": "本地电脑自动化 (Computer Use)",
       "question": "帮我自动操作电脑完成某个任务。",
-      "zip": "skill-local-computer-use-1.0.6-20260628-001409.zip",
       "flow_order": 9,
-      "io": { "in": "text", "out": "none" },
-      "keywords": ["电脑自动化", "自动操作", "操作电脑", "帮我点", "自动完成", "代操作", "自动化任务", "computer use", "gui automation"]
+      "io": {
+        "in": "text",
+        "out": "none"
+      },
+      "keywords": [
+        "电脑自动化",
+        "自动操作",
+        "操作电脑",
+        "帮我点",
+        "自动完成",
+        "代操作",
+        "自动化任务",
+        "computer use",
+        "gui automation"
+      ]
+    },
+    {
+      "key": "ocr-npu",
+      "skill_name": "Local OCR on NPU",
+      "name_cn": "本地 OCR (NPU)",
+      "question": "识别这张图片里的文字。",
+      "flow_order": 1,
+      "io": {
+        "in": "image",
+        "out": "text"
+      },
+      "keywords": [
+        "ocr",
+        "识别文字",
+        "文字识别",
+        "图片文字",
+        "图片里的文字",
+        "图里的文字",
+        "提取文字",
+        "提取图片文字",
+        "识别图片",
+        "扫描文字",
+        "npu ocr",
+        "text recognition"
+      ]
+    },
+    {
+      "key": "mineru",
+      "skill_name": "local-mineru",
+      "name_cn": "本地文档解析 (MinerU)",
+      "question": "帮我解析这个 PDF，转成 Markdown / 结构化文本。",
+      "flow_order": 1,
+      "io": {
+        "in": "document",
+        "out": "text"
+      },
+      "keywords": [
+        "pdf",
+        "文档解析",
+        "解析文档",
+        "转markdown",
+        "转 markdown",
+        "文档转",
+        "mineru",
+        "扫描件",
+        "扫描版",
+        "论文解析",
+        "版面分析",
+        "parse document",
+        "结构化文本",
+        "解析成结构化",
+        "卷宗",
+        "研报"
+      ]
+    },
+    {
+      "key": "screenshot-qa",
+      "skill_name": "local-screenshot-qa",
+      "name_cn": "本地截图问答",
+      "question": "帮我截个屏，然后回答屏幕内容的问题。",
+      "flow_order": 0,
+      "io": {
+        "in": "screen",
+        "out": "text"
+      },
+      "keywords": [
+        "截图问答",
+        "截屏",
+        "屏幕问答",
+        "截个屏",
+        "屏幕内容",
+        "看屏幕回答",
+        "screenshot",
+        "screen qa"
+      ]
     },
     {
       "key": "vram",
-      "name_cn": "本地显存查看 (VRAM)",
-      "question": "看看我现在的显存 / VRAM 占用情况。",
-      "zip": "skill-local-vram-1.0.6-20260628-001421.zip",
+      "skill_name": "local-vram",
+      "name_cn": "本地显存上限调整 (VRAM)",
+      "question": "帮我调整集成显卡的共享显存上限。",
       "flow_order": 9,
-      "io": { "in": "none", "out": "text" },
-      "keywords": ["显存", "vram", "显存占用", "gpu 内存", "显卡内存", "显存查看", "gpu memory"]
+      "io": {
+        "in": "none",
+        "out": "text"
+      },
+      "keywords": [
+        "显存",
+        "vram",
+        "显存占用",
+        "gpu 内存",
+        "显卡内存",
+        "显存查看",
+        "gpu memory",
+        "调整显存",
+        "共享显存",
+        "显存上限",
+        "调大显存",
+        "显存设置",
+        "shared vram"
+      ]
+    },
+    {
+      "key": "img2img",
+      "skill_name": "local-img2img",
+      "name_cn": "本地图生图 (Image-to-Image)",
+      "question": "基于这张图重绘 / 修改一张新图。",
+      "flow_order": 3,
+      "io": {
+        "in": "image",
+        "out": "image"
+      },
+      "keywords": [
+        "图生图",
+        "风格转换",
+        "改图",
+        "基于这张图",
+        "图片编辑",
+        "重绘",
+        "img2img",
+        "image to image"
+      ]
+    },
+    {
+      "key": "realtime-translator",
+      "skill_name": "local-realtime-translator",
+      "name_cn": "本地实时翻译",
+      "question": "帮我实时翻译这段对话/语音。",
+      "flow_order": 3,
+      "io": {
+        "in": "text",
+        "out": "text"
+      },
+      "keywords": [
+        "实时翻译",
+        "同声传译",
+        "同传",
+        "边说边译",
+        "实时口译",
+        "会议翻译",
+        "realtime translate",
+        "live translation",
+        "翻译成",
+        "再翻译"
+      ]
+    },
+    {
+      "key": "txt2video",
+      "skill_name": "LightX2V",
+      "name_cn": "本地视频生成 (LightX2V)",
+      "question": "根据这段描述生成一段视频。",
+      "flow_order": 2,
+      "io": {
+        "in": "text",
+        "out": "video"
+      },
+      "keywords": [
+        "文生视频",
+        "生成视频",
+        "生成一段视频",
+        "text to video",
+        "txt2video",
+        "视频生成",
+        "图生视频",
+        "图片生成视频",
+        "lightx2v",
+        "image to video",
+        "i2v",
+        "t2v"
+      ]
+    },
+    {
+      "key": "paddleocr-vl",
+      "skill_name": "Local PaddleOCR-VL-1.5",
+      "name_cn": "本地文档结构化解析 (PaddleOCR-VL)",
+      "question": "帮我把这份发票/表单/报表解析成结构化数据。",
+      "flow_order": 1,
+      "io": {
+        "in": "document",
+        "out": "text"
+      },
+      "keywords": [
+        "发票",
+        "表单",
+        "报表",
+        "表格提取",
+        "结构化",
+        "结构化数据",
+        "结构化json",
+        "版面",
+        "版面保留",
+        "document to data",
+        "document to code",
+        "paddleocr",
+        "paddleocr-vl",
+        "文档转数据",
+        "文档转代码",
+        "提取表格",
+        "图表解析",
+        "生成notebook"
+      ]
+    },
+    {
+      "key": "yolo26",
+      "skill_name": "Yolo26",
+      "name_cn": "本地目标检测 (YOLO26)",
+      "question": "检测这张图片里有哪些物体。",
+      "flow_order": 3,
+      "io": {
+        "in": "image",
+        "out": "labels"
+      },
+      "keywords": [
+        "目标检测",
+        "物体检测",
+        "检测物体",
+        "识别物体",
+        "检测",
+        "物体",
+        "哪些物体",
+        "框出",
+        "yolo",
+        "detect objects",
+        "object detection",
+        "人数统计",
+        "物体计数",
+        "库存计数",
+        "安全区域",
+        "实时摄像头",
+        "ultralytics"
+      ]
+    },
+    {
+      "key": "desktop-pet",
+      "skill_name": "Desktop Pet",
+      "name_cn": "本地桌宠 (Desktop Pet)",
+      "question": "帮我部署一个本地桌宠。",
+      "flow_order": 9,
+      "io": {
+        "in": "text",
+        "out": "none"
+      },
+      "keywords": [
+        "桌宠",
+        "桌面宠物",
+        "虚拟宠物",
+        "desktop pet",
+        "minicpm 桌宠",
+        "养个宠物",
+        "桌面伴侣",
+        "陪聊桌宠"
+      ]
+    },
+    {
+      "key": "game-guide",
+      "skill_name": "AI游戏路书Skill",
+      "name_cn": "AI 游戏路书",
+      "question": "帮我做一个游戏实时攻略助手。",
+      "flow_order": 9,
+      "io": {
+        "in": "screen",
+        "out": "text"
+      },
+      "keywords": [
+        "游戏攻略",
+        "路书",
+        "游戏路书",
+        "攻略",
+        "game guide",
+        "游戏助手",
+        "实时攻略",
+        "攻略悬浮窗",
+        "游戏进度"
+      ]
     }
   ],
-
   "_combos_doc": "已知组合配方（白名单）。用于覆盖「会议纪要」「字幕助手」这类没有直白关键词、单靠多命中兜不住的说法。stages 的顺序就是执行顺序，优先级高于 flow_order 自动排序。",
   "combos": [
     {
       "id": "subtitle-assistant",
       "name_cn": "实时字幕 / 会议助手",
-      "stages": ["asr", "realtime-translator"],
-      "keywords": ["字幕", "会议助手", "同传助手", "实时字幕", "会议记录", "开会用", "字幕生成", "字幕 app", "字幕应用"]
+      "stages": [
+        "asr",
+        "realtime-translator"
+      ],
+      "keywords": [
+        "字幕",
+        "会议助手",
+        "同传助手",
+        "实时字幕",
+        "会议记录",
+        "开会用",
+        "字幕生成",
+        "字幕 app",
+        "字幕应用"
+      ]
     },
     {
       "id": "voice-assistant",
       "name_cn": "本地语音助手应用",
-      "stages": ["asr", "tts"],
-      "keywords": ["语音助手", "语音对话应用", "能听能说", "语音交互应用", "语音助理"],
+      "stages": [
+        "asr",
+        "tts"
+      ],
+      "keywords": [
+        "语音助手",
+        "语音对话应用",
+        "能听能说",
+        "语音交互应用",
+        "语音助理"
+      ],
       "note": "APP Build 的典型形态：听（asr）+ 说（tts），中间的对话由 agent 自己承担"
     },
     {
       "id": "meeting-minutes",
       "name_cn": "会议纪要",
-      "stages": ["asr"],
-      "keywords": ["会议纪要", "纪要", "整理成纪要", "会议总结"],
+      "stages": [
+        "asr"
+      ],
+      "keywords": [
+        "会议纪要",
+        "纪要",
+        "整理成纪要",
+        "会议总结"
+      ],
       "note": "asr 出文字后由 agent 直接总结成纪要，不需要额外 skill"
     },
     {
       "id": "doc-audiobook",
       "name_cn": "文档转有声书",
-      "stages": ["mineru", "tts"],
-      "keywords": ["有声书", "朗读文档", "读这本", "读这个 pdf", "念这份文档", "能朗读的", "读出来的小工具", "把 pdf 读", "文档朗读应用"]
+      "stages": [
+        "mineru",
+        "tts"
+      ],
+      "keywords": [
+        "有声书",
+        "朗读文档",
+        "读这本",
+        "读这个 pdf",
+        "念这份文档",
+        "能朗读的",
+        "读出来的小工具",
+        "把 pdf 读",
+        "文档朗读应用"
+      ]
     },
     {
       "id": "image-text-speech",
       "name_cn": "图片文字朗读",
-      "stages": ["ocr-npu", "tts"],
-      "keywords": ["念图里的字", "图里的文字读出来", "图片文字读出来", "文字提取出来读", "文字提取出来，然后读", "提取出来读给我"]
-    },
-    {
-      "id": "hd-illustration",
-      "name_cn": "生成图并增强",
-      "stages": ["txt2img", "sr"],
-      "keywords": ["生成高清图", "画一张高清", "生成图并放大"]
+      "stages": [
+        "ocr-npu",
+        "tts"
+      ],
+      "keywords": [
+        "念图里的字",
+        "图里的文字读出来",
+        "图片文字读出来",
+        "文字提取出来读",
+        "文字提取出来，然后读",
+        "提取出来读给我"
+      ]
     },
     {
       "id": "screen-agent",
       "name_cn": "看屏幕并自动操作",
-      "stages": ["screenshot-qa", "computer-use"],
-      "keywords": ["看着屏幕帮我", "根据屏幕内容操作", "看屏幕自动"]
+      "stages": [
+        "screenshot-qa",
+        "computer-use"
+      ],
+      "keywords": [
+        "看着屏幕帮我",
+        "根据屏幕内容操作",
+        "看屏幕自动"
+      ]
     },
     {
       "id": "narrated-video",
       "name_cn": "带配音的视频",
-      "stages": ["txt2video", "tts"],
-      "keywords": ["带配音的视频", "视频加解说", "生成视频并配音"]
+      "stages": [
+        "txt2video",
+        "tts"
+      ],
+      "keywords": [
+        "带配音的视频",
+        "视频加解说",
+        "生成视频并配音"
+      ]
     }
   ],
-
   "_synthesis_doc": "内容合成类需求（PRD / 培训材料 / 学习路径）：产出物是散文文档，没有可安装的本地 skill，也没有 [SKILL_RESULT] 可产出。真正干活的是 agent 自己的写作能力；skill 唯一能做的是用 openvino-content-fetch 抓真实 notebook/示例当素材。命中后路由到 scope=synthesize —— 绝不要去装任何 preset skill，也不要搭环境 / 下载模型 / 部署服务。",
   "synthesis_signals": [
-    { "id": "prd",           "name_cn": "PRD / 产品需求文档", "keywords": ["prd", "产品需求文档", "需求文档", "写个需求", "产品方案", "功能规格"] },
-    { "id": "training",      "name_cn": "培训材料 / 教学讲解", "keywords": ["培训材料", "培训讲解", "教学材料", "讲解材料", "课件", "给团队讲", "内训", "培训"] },
-    { "id": "learning-path", "name_cn": "学习路径规划",       "keywords": ["学习路径", "从哪开始", "怎么入门", "学习计划", "该学什么", "入门顺序", "循序渐进", "该从哪"] }
+    {
+      "id": "prd",
+      "name_cn": "PRD / 产品需求文档",
+      "keywords": [
+        "prd",
+        "产品需求文档",
+        "需求文档",
+        "写个需求",
+        "产品方案",
+        "功能规格"
+      ]
+    },
+    {
+      "id": "training",
+      "name_cn": "培训材料 / 教学讲解",
+      "keywords": [
+        "培训材料",
+        "培训讲解",
+        "教学材料",
+        "讲解材料",
+        "课件",
+        "给团队讲",
+        "内训",
+        "培训"
+      ]
+    },
+    {
+      "id": "learning-path",
+      "name_cn": "学习路径规划",
+      "keywords": [
+        "学习路径",
+        "从哪开始",
+        "怎么入门",
+        "学习计划",
+        "该学什么",
+        "入门顺序",
+        "循序渐进",
+        "该从哪"
+      ]
+    }
   ],
-
-  "_gap_signals_doc": "14 个预设原子能力覆盖不到的能力。命中时不代表要放弃预设能力：能被预设覆盖的阶段照常用预设原子，只有这些缺口阶段才参考 dev skill 单独开发（route 用 gaps= 字段返回）。",
+  "_gap_signals_doc": "15 个预设原子能力覆盖不到的能力。命中时不代表要放弃预设能力：能被预设覆盖的阶段照常用预设原子，只有这些缺口阶段才参考 dev skill 单独开发（route 用 gaps= 字段返回）。",
   "gap_signals": [
-    { "id": "voice-clone",  "name_cn": "语音克隆 / 声音复刻",   "keywords": ["语音克隆", "声音克隆", "声音复刻", "克隆音色", "voice clone"] },
-    { "id": "speaker-id",   "name_cn": "声纹识别 / 说话人分离", "keywords": ["声纹", "说话人分离", "区分说话人", "谁在说话", "speaker diarization"] },
-    { "id": "face",         "name_cn": "人脸识别 / 人脸比对",   "keywords": ["人脸识别", "人脸比对", "认出这个人", "face recognition"] },
-    { "id": "segmentation", "name_cn": "图像分割",             "keywords": ["图像分割", "语义分割", "抠图", "分割掩码", "segmentation"] },
-    { "id": "depth-3d",     "name_cn": "深度估计 / 3D 重建",   "keywords": ["深度估计", "3d 重建", "三维重建", "点云", "depth estimation"] },
-    { "id": "pose",         "name_cn": "姿态估计 / 关键点",     "keywords": ["姿态估计", "关键点", "骨骼点", "动作识别", "pose estimation"] },
-    { "id": "audio-sep",    "name_cn": "音频分离 / 音乐生成",   "keywords": ["人声分离", "伴奏分离", "音乐生成", "音频分离"] },
-    { "id": "video-qa",     "name_cn": "视频理解 / 视频问答",   "keywords": ["视频问答", "视频理解", "看视频回答", "视频内容分析"] }
+    {
+      "id": "voice-clone",
+      "name_cn": "语音克隆 / 声音复刻",
+      "keywords": [
+        "语音克隆",
+        "声音克隆",
+        "声音复刻",
+        "克隆音色",
+        "voice clone"
+      ]
+    },
+    {
+      "id": "speaker-id",
+      "name_cn": "声纹识别 / 说话人分离",
+      "keywords": [
+        "声纹",
+        "说话人分离",
+        "区分说话人",
+        "谁在说话",
+        "speaker diarization"
+      ]
+    },
+    {
+      "id": "face",
+      "name_cn": "人脸识别 / 人脸比对",
+      "keywords": [
+        "人脸识别",
+        "人脸比对",
+        "认出这个人",
+        "face recognition"
+      ]
+    },
+    {
+      "id": "segmentation",
+      "name_cn": "图像分割",
+      "keywords": [
+        "图像分割",
+        "语义分割",
+        "抠图",
+        "分割掩码",
+        "segmentation"
+      ]
+    },
+    {
+      "id": "depth-3d",
+      "name_cn": "深度估计 / 3D 重建",
+      "keywords": [
+        "深度估计",
+        "3d 重建",
+        "三维重建",
+        "点云",
+        "depth estimation"
+      ]
+    },
+    {
+      "id": "pose",
+      "name_cn": "姿态估计 / 关键点",
+      "keywords": [
+        "姿态估计",
+        "关键点",
+        "骨骼点",
+        "动作识别",
+        "pose estimation"
+      ]
+    },
+    {
+      "id": "audio-sep",
+      "name_cn": "音频分离 / 音乐生成",
+      "keywords": [
+        "人声分离",
+        "伴奏分离",
+        "音乐生成",
+        "音频分离"
+      ]
+    },
+    {
+      "id": "video-qa",
+      "name_cn": "视频理解 / 视频问答",
+      "keywords": [
+        "视频问答",
+        "视频理解",
+        "看视频回答",
+        "视频内容分析"
+      ]
+    }
   ],
   "dev_skills": [
     {
@@ -212,12 +621,35 @@
       "alias": "ENV",
       "when": "用户需要在 Intel AIPC 上搭建 / 配置 OpenVINO 开发环境",
       "keywords": [
-        "配置环境", "安装环境", "搭环境", "环境搭建", "装 openvino", "配好环境", "开发环境",
-        "配好", "配置", "搭建", "装", "安装", "一次",
-        "openvino 环境", "openvino environment",
-        "intel 笔记本", "intel notebook", "intel 电脑", "intel pc",
-        "环境", "environment", "setup environment", "install openvino", "配置 python",
-        "precheck", "环境检查", "环境配置", "配环境", "装环境"
+        "配置环境",
+        "安装环境",
+        "搭环境",
+        "环境搭建",
+        "装 openvino",
+        "配好环境",
+        "开发环境",
+        "配好",
+        "配置",
+        "搭建",
+        "装",
+        "安装",
+        "一次",
+        "openvino 环境",
+        "openvino environment",
+        "intel 笔记本",
+        "intel notebook",
+        "intel 电脑",
+        "intel pc",
+        "环境",
+        "environment",
+        "setup environment",
+        "install openvino",
+        "配置 python",
+        "precheck",
+        "环境检查",
+        "环境配置",
+        "配环境",
+        "装环境"
       ]
     },
     {
@@ -225,11 +657,35 @@
       "alias": "FETCH",
       "when": "用户想找 notebook / 教程 / 示例 / 文章，或搜索 / 下载模型与预转换 IR",
       "keywords": [
-        "notebook", "教程", "示例", "下载模型", "找模型", "下载一个", "下载某",
-        "推荐", "学习路径", "文章", "modelscope", "csdn", "tutorial", "sample",
-        "download model", " ir ", "预转换", "learning path",
-        "下载权重", "下载参数", "下载ir", "取模型", "拉模型",
-        "图像分割", "目标检测", "asr 模型", "whisper 模型", "llm 模型", "openVINO 模型"
+        "notebook",
+        "教程",
+        "示例",
+        "下载模型",
+        "找模型",
+        "下载一个",
+        "下载某",
+        "推荐",
+        "学习路径",
+        "文章",
+        "modelscope",
+        "csdn",
+        "tutorial",
+        "sample",
+        "download model",
+        " ir ",
+        "预转换",
+        "learning path",
+        "下载权重",
+        "下载参数",
+        "下载ir",
+        "取模型",
+        "拉模型",
+        "图像分割",
+        "目标检测",
+        "asr 模型",
+        "whisper 模型",
+        "llm 模型",
+        "openVINO 模型"
       ]
     },
     {
@@ -237,10 +693,29 @@
       "alias": "PIPE",
       "when": "用户想把多个模型组装成流水线、优化设备/精度、做基准测试或部署为服务",
       "keywords": [
-        "流水线", "pipeline", "组装", "串联", "部署服务", "serve", "部署成服务",
-        "基准测试", "benchmark", "找瓶颈", "bottleneck",
-        "优化", "加速", "多模型", "端到端", "quantize", "量化",
-        "whisper", "asr→llm", "asr→tts", "asr llm tts", "rag", "vlm"
+        "流水线",
+        "pipeline",
+        "组装",
+        "串联",
+        "部署服务",
+        "serve",
+        "部署成服务",
+        "基准测试",
+        "benchmark",
+        "找瓶颈",
+        "bottleneck",
+        "优化",
+        "加速",
+        "多模型",
+        "端到端",
+        "quantize",
+        "量化",
+        "whisper",
+        "asr→llm",
+        "asr→tts",
+        "asr llm tts",
+        "rag",
+        "vlm"
       ]
     }
   ]
